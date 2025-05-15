@@ -16,7 +16,7 @@ Key features:
 - Integration with geospatial data formats
 """
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __author__ = "Kshitij Raj Sharma"
 
 from .core.classifier import SupervisedClassifier

@@ -1,3 +1,10 @@
+## v0.2.1 (2025-05-15)
+
+### Fix
+
+- **ci**: fixes ci to push pypi and then updates the URL
+- remove redundant --no-group option in dependency installation
+
 ## v0.2.0 (2025-05-15)
 
 ### Feat
