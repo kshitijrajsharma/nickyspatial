@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://kshitijrajsharma.github.io/nickyspatial/</loc>
+         <lastmod>2025-05-16</lastmod>
+    </url>
+    <url>
+         <loc>https://kshitijrajsharma.github.io/nickyspatial/dev/</loc>
+         <lastmod>2025-05-16</lastmod>
+    </url>
+    <url>
+         <loc>https://kshitijrajsharma.github.io/nickyspatial/reference/</loc>
+         <lastmod>2025-05-16</lastmod>
+    </url>
+    <url>
+         <loc>https://kshitijrajsharma.github.io/nickyspatial/examples/simple_usecase/</loc>
+         <lastmod>2025-05-16</lastmod>
+    </url>
+    <url>
+         <loc>https://kshitijrajsharma.github.io/nickyspatial/examples/supervised_classification/</loc>
+         <lastmod>2025-05-16</lastmod>
+    </url>
+</urlset>
