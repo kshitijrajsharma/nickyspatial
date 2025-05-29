@@ -22,9 +22,11 @@ def plot_layer(
     figsize=(12, 10),
     cmap="viridis",
     show_boundaries=False,
+    ax=None,
 ):
     """Plot a layer, optionally with an attribute or image backdrop."""
-    fig, ax = plt.subplots(figsize=figsize)
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
 
     if title:
         ax.set_title(title)
@@ -87,7 +89,10 @@ def plot_layer(
             )
 
     ax.grid(alpha=0.3)
-    return fig
+
+    if ax is None:
+        return fig
+    return ax
 
 
 def plot_layer_interactive(layer, image_data=None, figsize=(10, 8)):
@@ -269,9 +274,18 @@ def plot_layer_interactive(layer, image_data=None, figsize=(10, 8)):
     display(ui, out_fig, controls)
 
 
-def plot_classification(layer, class_field="classification", figsize=(12, 10), legend=True, class_color=None):
-    """Plot classified segments with different colors for each class."""
-    fig, ax = plt.subplots(figsize=figsize)
+def plot_classification(layer, class_field="classification", figsize=(12, 10), legend=True, class_color=None, ax=None, title=None):
+    """Plot classified segments with different colors for each class.
+
+    layer :
+    figsize:
+    class_clor:
+    ax : ax instance of matplotlib Axes to plot on.
+    title : str, optional
+        Title for the plot. If None, defaults to "Classification Map".
+    """
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
     if not class_color:
         class_color = {}
 
@@ -322,7 +336,10 @@ def plot_classification(layer, class_field="classification", figsize=(12, 10), l
         ax.legend(handles=patches, loc="upper right", title=class_field)
 
     # ax.set_title(f"Classification by {class_field}")
-    ax.set_title("Classification Map")
+    if title is None:
+        ax.set_title("Classification Map")
+    else:
+        ax.set_title(title)
 
     ax.set_xlabel("X Coordinate")
     ax.set_ylabel("Y Coordinate")
@@ -331,7 +348,9 @@ def plot_classification(layer, class_field="classification", figsize=(12, 10), l
     if "_class_id" in layer.objects.columns:
         layer.objects = layer.objects.drop(columns=["_class_id"])
 
-    return fig
+    if ax is None:
+        return fig
+    return ax
 
 
 def plot_comparison(

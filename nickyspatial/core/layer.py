@@ -30,7 +30,7 @@ class Layer:
         parent : Layer, optional
             Parent layer that this layer is derived from.
         type : str
-            Type of layer: "segmentation", "classification", "filter", or "generic"
+            Type of layer: "segmentation", "classification", "filter", "generic" or "merged".
         """
         self.id = str(uuid.uuid4())
         self.name = name if name else f"Layer_{self.id[:8]}"
