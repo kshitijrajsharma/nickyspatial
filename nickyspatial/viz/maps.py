@@ -92,7 +92,8 @@ def plot_layer(
 
     if ax is None:
         return fig
-    return ax
+    else:
+        return ax
 
 
 def plot_layer_interactive(layer, image_data=None, figsize=(10, 8)):
