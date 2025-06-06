@@ -20,7 +20,6 @@ keywords = ["remote-sensing", "obia", "object", "segmentation"]
 requires-python = ">=3.10"
 dependencies = [
     "geopandas>=1.0.1",
-    "matplotlib>=3.10.1",
     "numexpr>=2.10.2",
     "pandas>=2.2.3",
     "rasterio>=1.4.3",
@@ -33,6 +32,9 @@ dependencies = [
     "ipywidgets>=8.1.7",
     "ipympl>=0.9.7",
     "plotly>=6.0.1",
+    "matplotlib>=3.7.0",
+    "ipykernel",
+    "jupyterlab"
 ]
 
 [project.urls]

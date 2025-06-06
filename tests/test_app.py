@@ -79,7 +79,7 @@ def test_full_workflow(test_raster_path):
     assert segmentation_layer is not None, "Segmentation layer was not created."
 
     # Step 4: Plot segmentation and save the figure.
-    fig1 = plot_layer(segmentation_layer, image_data, rgb_bands=(3, 2, 1), show_boundaries=True)
+    fig1 = plot_layer(segmentation_layer, image_data, rgb_bands=(3, 2, 1), show_boundaries=True, ax=None)
     seg_img_path = os.path.join(output_dir, "1_segmentation.png")
     fig1.savefig(seg_img_path)
     assert os.path.exists(seg_img_path), "Segmentation image not saved."

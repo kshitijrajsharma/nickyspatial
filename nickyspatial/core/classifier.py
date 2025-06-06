@@ -3,6 +3,10 @@
 
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.inspection import permutation_importance
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
 
 from .layer import Layer
 
@@ -10,17 +14,19 @@ from .layer import Layer
 class SupervisedClassifier:
     """Implementation of Supervised Classification algorithm."""
 
-    # TODO: name vs layer_name
+    # TODO: najime vs layer_name
 
     def __init__(self, name=None, classifier_type="Random Forest", classifier_params=None):
         """Initialize the segmentation algorithm.
 
         Parameters:
         -----------
-        scale : str
-            classifier type name eg: RF for Random Forest, SVC for Support Vector Classifier
+        name : str
+            name of the algorithm, used for metadata
+        classifier_type : str
+            "Random Forest", "SVC"
         classifier_params : dict
-           additional parameters relayed to classifier
+           additional parameters related to classifier
         """
         self.classifier_type = classifier_type
         self.classifier_params = classifier_params
@@ -28,6 +34,7 @@ class SupervisedClassifier:
         self.classifier = None
         self.name = name if name else "Supervised_Classification"
         self.features = None
+        self.scaler = None
 
     def _training_sample(self, layer, samples):
         """Create vector objects from segments.
@@ -54,7 +61,7 @@ class SupervisedClassifier:
         return layer
 
     def _train(self, features):
-        """Calculate statistics for segments based on image data.
+        """Train  the classifier using the training layer.
 
         Parameters:
         -----------
@@ -69,20 +76,51 @@ class SupervisedClassifier:
         if not self.features:
             self.features = self.training_layer.columns
         self.features = [col for col in self.features if col not in ["segment_id", "classification", "geometry"]]
+
         x = self.training_layer[self.features]
 
         y = self.training_layer["classification"]
 
+        metrics = {}
+
+        ## validate
+        supported_classifiers = ["Random Forest", "SVC"]
+        if self.classifier_type not in ["Random Forest", "SVC"]:
+            raise ValueError(f"Unsupported classifier type: '{self.classifier_type}'. Supported types are: {supported_classifiers}")
+
         if self.classifier_type == "Random Forest":
             self.classifier = RandomForestClassifier(**self.classifier_params)
             self.classifier.fit(x, y)
+
+            ## calculate feature importances
             feature_importances = pd.Series(self.classifier.feature_importances_, index=self.features) * 100
             feature_importances = feature_importances.sort_values(ascending=False)
 
-        test_accuracy = self.classifier.oob_score_
-        # print("OOB Score:", self.classifier.oob_score_)
+            ## add metrics
+            metrics["feature_importances"] = feature_importances.to_dict()
+            metrics["test_accuracy"] = self.classifier.oob_score_
 
-        return self.classifier, test_accuracy, feature_importances
+        elif self.classifier_type == "SVC":
+            ## scale
+            self.scaler = StandardScaler()
+            x_scaled = self.scaler.fit_transform(x)
+
+            self.classifier = SVC(**self.classifier_params)
+            self.classifier.fit(x_scaled, y)
+
+            ## There is no native feature importance on SVC, so permutation is  used to achieve feature importance
+            result = permutation_importance(self.classifier, x_scaled, y, n_repeats=10, random_state=420)
+            metrics["feature_importances"] = (
+                pd.Series(result.importances_mean, index=self.features).sort_values(ascending=False).to_dict()
+            )
+
+            ## add metrics
+            cv_scores = cross_val_score(self.classifier, x_scaled, y, cv=5)
+            test_accuracy = cv_scores.mean()
+
+            metrics["test_accuracy"] = test_accuracy
+
+        return self.classifier, metrics
 
     def _prediction(self, layer):
         """Perform classification prediction on input layer features.
@@ -104,6 +142,10 @@ class SupervisedClassifier:
         #     x = layer.drop(columns=["segment_id", "classification", "geometry"], errors="ignore")
         # else:
         x = layer[self.features]
+
+        ## Apply scaling if using SVC
+        if self.classifier_type == "SVC" and self.scaler:
+            x = self.scaler.transform(x)
 
         # print(layer.columns)
         # x = layer.drop(columns=["segment_id", "classification", "geometry"], errors="ignore")
@@ -144,17 +186,18 @@ class SupervisedClassifier:
 
         layer = source_layer.objects.copy()
         self._training_sample(layer, samples)
-        _, accuracy, feature_importances = self._train(features)
+        _, metrics = self._train(features)
 
         layer = self._prediction(layer)
 
         result_layer.objects = layer
 
-        result_layer.metadata = {
-            "supervised classification": self.name,
-        }
+        result_layer.metadata = {"supervised classification": self.name, "metrics": metrics}
+
+        result_layer.metadata["classifier"] = self.classifier_type
+        result_layer.metadata["classifier_params"] = self.classifier_params
 
         if layer_manager:
             layer_manager.add_layer(result_layer)
 
-        return result_layer, accuracy, feature_importances
+        return result_layer, metrics
