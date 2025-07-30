@@ -75,7 +75,7 @@
   const baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 20, attribution: '© OpenStreetMap'
   }).addTo(map);
-  
+
   const orthoLayer = L.tileLayer('http://localhost:8000/{z}/{x}/{-y}.png', {
 	  minZoom: 0,
 	  maxZoom: 22,
@@ -97,7 +97,7 @@
   };
 
   const layerControl = L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
-	
+
 
   let segmentLayer;
   let classColors = {};
@@ -128,7 +128,7 @@
 	  for (const key in obj) {
 		if (Object.hasOwn(obj, key)) {
 		  const value = obj[key];
-		  
+
 		  if (typeof value === 'object' && value !== null) {
 			if (!isEmpty(value)) {
 			  return false;
@@ -142,14 +142,14 @@
 	  return true;
 	}
 
-	
+
   function generateClassControls() {
 	//console.log(classData);
 	var confirm = true;
 	if(!isEmpty(classData)){
 		confirm = window.confirm("Your selected samples will be reset. Are you sure?")
 	}
-	
+
 	if(confirm){
 		resetClasses();  // Auto reset on change
 		const classCount = parseInt(document.getElementById('classCount').value);
@@ -178,7 +178,7 @@
 		legendControl.addTo(map);
 		updateClassIds();
 	}
-    
+
   }
 
   function updateClassIds() {
@@ -219,7 +219,7 @@
     if (legendControl._container) legendControl.remove();
     resetSelections();
   }
-  
+
   function removeFromAllClasses(value, classArrays) {
 	  for (const className in classArrays) {
 		const index = classArrays[className].indexOf(value);
@@ -283,8 +283,8 @@
 
   // Initial run
   generateClassControls();
-  
- 
+
+
 </script>
 
 </body>
