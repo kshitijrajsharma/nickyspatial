@@ -1,18 +1,223 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Leaflet Segment Class Assignment</title>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <title>Leaflet GeoJSON Styler</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    #map { width: 70%; height: 100vh; float: left; }
-    #sidebar {
-      width: 30%; height: 100vh; float: right;
-      overflow-y: auto; padding: 10px; box-sizing: border-box;
-      border-left: 1px solid #ccc; font-family: sans-serif;
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f6f9;
+      color: #333;
     }
-    .legend {
+
+    #map {
+      width: 70%;
+      height: 100vh;
+      float: left;
+    }
+
+    #sidebar {
+      width: 30%;
+      height: 100vh;
+      float: right;
+      overflow-y: auto;
+      padding: 24px;
+      box-sizing: border-box;
+      border-left: 1px solid #ddd;
+      background-color: #fff;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    h4 {
+      margin-top: 20px;
+      margin-bottom: 10px;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid #e0e0e0;
+      margin: 20px 0;
+    }
+
+    label {
+      font-weight: 400;
+      display: block;
+      margin-top: 10px;
+      margin-bottom: 5px;
+	  font-size: 12px;
+    }
+
+    select,
+    input[type="number"],
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    .drop-zone {
+      border: 2px dashed #aaa;
+      background-color: #fafafa;
+      padding: 20px;
+      text-align: center;
+      border-radius: 6px;
+      transition: background-color 0.2s, border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .drop-zone.dragover {
+      border-color: #007bff;
+      background-color: #e9f5ff;
+    }
+
+    .layer-list {
+      margin-top: 15px;
+    }
+
+    .layer-item {
+      padding: 8px 12px;
+      background: #f9f9f9;
+      border: 1px solid #ccc;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      transition: background 0.2s, border 0.2s;
+      cursor: pointer;
+    }
+
+    .layer-item:hover {
+      background: #eef4fa;
+    }
+
+    .layer-item.active {
+      background-color: #dbeeff;
+      border-color: #007bff;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .button-row button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .button-row button:hover {
+      background-color: #0056b3;
+    }
+
+    .reset_buttons {
+      background-color: #dc3545 !important;
+    }
+
+    .reset_buttons:hover {
+      background-color: #a71d2a !important;
+    }
+
+    #styleWarning {
+      color: #8c7a50;
+	  background-color: #ffffe8;
+      border: 1px solid #f5c2c7;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .class-section {
+      background: #fff;
+      padding: 12px;
+      margin-top: 15px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .class-ids {
+      font-size: 13px;
+      word-wrap: break-word;
+      margin-top: 5px;
+    }
+
+    /* Tabs Navigation */
+    .tab-container {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      margin-bottom: 20px;
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: 10px;
+      background: #f1f1f1;
+      border: none;
+      border-right: 1px solid #ddd;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .tab-button:last-child {
+      border-right: none;
+    }
+
+    .tab-button.active {
+      background-color: #ffffff;
+      border-bottom: 2px solid #007bff;
+      color: #007bff;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+	
+	.class-row {
+	  display: flex;
+	  align-items: center;
+	  gap: 10px;
+	  margin-bottom: 8px;
+	}
+
+	.class-row input[type="text"] {
+	  flex: 1;
+	}
+	
+	#innerBlock{
+	  background-color: #e9e9e9;
+	  padding: 10px;
+	}
+	
+	
+	.legend {
       background: white;
       padding: 8px;
       line-height: 1.4em;
@@ -27,265 +232,164 @@
       margin-right: 5px;
       vertical-align: middle;
     }
-    .class-input { margin-bottom: 5px; }
-    .class-input input[type="text"] {
-      width: 80px;
-    }
-    .class-section {
-      margin-top: 10px;
-      padding: 5px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-    .class-section h4 {
-      margin: 4px 0;
-      font-size: 14px;
-    }
-    .class-ids {
-      font-size: 13px;
-      word-wrap: break-word;
-    }
-	.reset_buttons{
-		margin-top:20px;
+	#style-config{
+	  background-color: #e9e9e9;
+	  padding: 10px;
 	}
+	
+	.style-config {
+	  border: 1px solid #ddd;
+	  border-radius: 5px;
+	  padding: 10px 12px;
+	  margin-bottom: 10px;
+	  background-color: #fafafa;
+	  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+	}
+
+	.style-label {
+	  font-size: 14px;
+	  margin-bottom: 8px;
+	}
+
+	.style-controls {
+	  display: flex;
+	  flex-wrap: wrap;
+	  gap: 2px;
+	  align-items: center;
+	}
+
+	.style-controls label {
+	  font-size: 10px;
+	  display: flex;
+	  flex-direction: column;
+	  gap: 3px;
+	  min-width: 70px;
+	}
+
+	.style-controls input[type="number"] {
+	  width: 60px;
+	  padding: 4px;
+	  border: 1px solid #ccc;
+	  border-radius: 4px;
+	}
+
+	.style-controls input[type="color"] {
+	  padding: 0;
+	  border: none;
+	  background: none;
+	  width: 40px;
+	  height: 30px;
+	  cursor: pointer;
+	}
+	
+	#upload_section_div{
+	  background-color: #e9e9e9;
+	  padding: 10px;
+	}
+
+	
+
   </style>
 </head>
 <body>
+  <div id="map"></div>
+  <div id="sidebar">
+    <div class="tab-container">
+      <button class="tab-button active" onclick="showTab('uploadTab')">Upload</button>
+      <button class="tab-button" onclick="showTab('samplesTab')">Samples</button>
+    </div>
 
-<div id="map"></div>
+    <!-- Upload Tab -->
+    <div id="uploadTab" class="tab-content active">
+	  <div id = "upload_section_div">
+	  <div id = "url_input_geojson">
+		<h4>Load Image from Path / TMS URL</h4>
+			<div class="geojson-path-input">
+			  <input type="text" id="imagePath" placeholder="e.g. http://localhost:8000 or full tile URL like http://localhost:8000/{z}/{x}/{-y}.png">
+			  <div class="button-row">
+				<button onclick="loadImage()">Load Tiles</button>
+			  </div>
+			</div>
+			<div id="imageLoadStatus" style="margin-top: 8px; font-size: 13px;"></div>
 
-<div id="sidebar">
-  <h3>Classification Tool</h3>
-  <label>Number of Classes:</label>
-  <input type="number" id="classCount" min="1" value="2" />
-  <button onclick="generateClassControls()">Generate</button>
-  <div id="classControls"></div>
+		  </br>	
+		  <h4>Load Segment GeoJSON by Path</h4>
+		  <div class="geojson-path-input">
+			<input type="text" id="geojsonPath" placeholder="eg: results/segment.geojson">
+			<div class="button-row">
+				<button onclick="loadGeoJSONByPath()">Load File</button>
+			</div>
+		  </div>
+		  <div id="geojsonPathStatus" style="margin-top: 8px; font-size: 13px;"></div>
+		  <br/>
+		  <label>OR</label>
+	  </div>
+	  
+	  
+      <h4>Upload GeoJSON / Image</h4>
+      <div id="dropZone" class="drop-zone">Drag & drop GeoJSON files or || small .tif, .png, .jpg file here or click to upload</div>
+	  </div>
+      
+	  <div id="layerList" class="layer-list"></div>
 
-  <button onclick="resetSelections()" class = "reset_buttons">Reset</button>
+      <div id="styleConfig" style="display: none;">
+        <h4>Styling Options</h4>
+        <label for="attributeSelect">Select Attribute to Style:</label>
+        <select id="attributeSelect"></select>
+        <div id="styleWarning"></div>
+        <div id="styleMapping"></div>
+      </div>
 
-  <h4>Segment IDs by Class</h4>
-  <div id="classwiseIds"></div>
-</div>
+	  <div class="button-row">
+        <button id = "showSamplesTabButton" onclick="showTab('samplesTab')" style="display: none;">Start picking samples ></button>
+	  </div>
+      <!--<div class="button-row">
+        <button onclick="exportStyledGeoJSON()">Export Styled GeoJSON</button>
+        <button onclick="exportClassifications()">Export CSV</button>
+      </div>-->
+    </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Samples Tab -->
+    <div id="samplesTab" class="tab-content">
+      <h4>Classification Tool</h4>
+      <div id="classificationInfo">Select a segment layer to start classification.</div>
 
-<script>
-  const map = L.map('map').setView([47.899167, 17.007472], 18);
+      <div id="classificationTool" style="display: none;">
+        <label for="classCount">Number of Classes:</label>
+        <input type="number" id="classCount" min="1" value="2" />
 
-  const baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 20, attribution: '© OpenStreetMap'
-  }).addTo(map);
+        <div class="button-row">
+          <button onclick="generateClassControls()">Generate</button>
+          <button onclick="resetSelections()" class="reset_buttons">Reset</button>
+        </div>
+		<br/>
+		<div id = "innerBlock">
+			<button onclick="download_class_json()">Download Class Values</button>
+			<label for="classCount">Select Class to pick samples:</label>
+			<div id="classControls"></div>
+			<h4>Segment IDs by Class</h4>
+			<div id="classwiseIds" class="class-ids"></div>
+		</div>
+      </div>
+    </div>
+  </div>
 
-  const orthoLayer = L.tileLayer('http://localhost:8000/{z}/{x}/{-y}.png', {
-	  minZoom: 0,
-	  maxZoom: 22,
-	  attribution: 'ZXY Layer',
-	  tms: false // Set to true if your tile folder structure follows TMS order (flipped Y)
-	});
-
-  // Add it to map
-  orthoLayer.addTo(map);
-
-  // Add Layer Switcher
-  const baseMaps = {
-    "OpenStreetMap": baseLayer
-  };
-
-  const overlayMaps = {
-    "Orthophoto": orthoLayer,
-	//"Segment Layer": segmentLayer
-  };
-
-  const layerControl = L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Load georaster and georaster-layer-for-leaflet -->
+	<script src="https://unpkg.com/georaster"></script>
+	<script src="https://unpkg.com/georaster-layer-for-leaflet"></script>
 
 
-  let segmentLayer;
-  let classColors = {};
-  let classData = {};
-  let currentClassKey = null;
+  <script src="main.js"></script>
 
-  const legendControl = L.control({ position: "bottomright" });
+  <script>
+    function showTab(tabId) {
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
-  legendControl.onAdd = function () {
-    const div = L.DomUtil.create("div", "legend");
-    div.innerHTML = "<b>Legend</b><br>";
-    for (let key in classColors) {
-      const label = document.getElementById(`label_${key}`)?.value || key;
-      div.innerHTML += `<span class="legend-color" style="background:${classColors[key]}"></span>${label}<br>`;
+      document.querySelector(`[onclick="showTab('${tabId}')"]`).classList.add('active');
+      document.getElementById(tabId).classList.add('active');
     }
-    return div;
-  };
-
-  function generateRandomColor() {
-    return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
-  }
-
-  function isEmpty(obj) {
-	  if (typeof obj !== 'object' || obj === null) {
-		return false; // Not an object
-	  }
-
-	  for (const key in obj) {
-		if (Object.hasOwn(obj, key)) {
-		  const value = obj[key];
-
-		  if (typeof value === 'object' && value !== null) {
-			if (!isEmpty(value)) {
-			  return false;
-			}
-		  } else {
-			return false; // Primitive (non-object) value found
-		  }
-		}
-	  }
-
-	  return true;
-	}
-
-
-  function generateClassControls() {
-	//console.log(classData);
-	var confirm = true;
-	if(!isEmpty(classData)){
-		confirm = window.confirm("Your selected samples will be reset. Are you sure?")
-	}
-
-	if(confirm){
-		resetClasses();  // Auto reset on change
-		const classCount = parseInt(document.getElementById('classCount').value);
-		const container = document.getElementById("classControls");
-		container.innerHTML = "";
-		classColors = {};
-		classData = {};
-
-		for (let i = 1; i <= classCount; i++) {
-		  const key = `class_${i}`;
-		  classColors[key] = generateRandomColor();
-		  classData[key] = [];
-
-		  const div = document.createElement("div");
-		  div.className = "class-input";
-
-		  div.innerHTML = `
-			<input type="radio" name="classRadio" value="${key}" ${i === 1 ? "checked" : ""} onchange="currentClassKey='${key}'; updateClassIds();">
-			<input type="text" id="label_${key}" value="${key}" placeholder="Class Name" oninput="updateClassIds()">
-		  `;
-
-		  container.appendChild(div);
-		}
-
-		currentClassKey = `class_1`;
-		legendControl.addTo(map);
-		updateClassIds();
-	}
-
-  }
-
-  function updateClassIds() {
-    const div = document.getElementById("classwiseIds");
-    div.innerHTML = "";
-    for (let key in classData) {
-      const ids = classData[key].sort((a, b) => a - b);
-      const label = document.getElementById(`label_${key}`)?.value || key;
-      const color = classColors[key];
-      const section = document.createElement("div");
-      section.className = "class-section";
-      section.innerHTML = `
-        <h4><span class="legend-color" style="background:${color}"></span>${label}</h4>
-        <div class="class-ids">${ids.join(', ') || "(none)"}</div>
-      `;
-      div.appendChild(section);
-    }
-  }
-
-  function resetSelections() {
-    if (!segmentLayer) return;
-    segmentLayer.eachLayer(l => {
-      const fid = l.feature.properties.segment_id;
-      for (let k in classData) {
-        classData[k] = classData[k].filter(id => id !== fid);
-      }
-      l.setStyle({ color: "#3388ff", fillOpacity: 0 });
-    });
-    updateClassIds();
-  }
-
-  function resetClasses() {
-    document.getElementById("classControls").innerHTML = "";
-    document.getElementById("classwiseIds").innerHTML = "";
-    classColors = {};
-    classData = {};
-    currentClassKey = null;
-    if (legendControl._container) legendControl.remove();
-    resetSelections();
-  }
-
-  function removeFromAllClasses(value, classArrays) {
-	  for (const className in classArrays) {
-		const index = classArrays[className].indexOf(value);
-		if (index !== -1) {
-		  classArrays[className].splice(index, 1);
-		}
-	  }
-	}
-
-	function onEachFeature(feature, layer) {
-	  const fid = feature.properties.segment_id;
-
-	  layer.on('click', () => {
-		if (!currentClassKey) return alert("Please select a class first!");
-
-		const alreadyInClass = classData[currentClassKey].includes(fid);
-
-		// Always remove from all classes first
-		removeFromAllClasses(fid, classData);
-
-		if (!alreadyInClass) {
-		  // Add to current class if it wasn't there already
-		  classData[currentClassKey].push(fid);
-
-		  layer.setStyle({
-			color: classColors[currentClassKey],
-			fillColor: classColors[currentClassKey],
-			fillOpacity: 0.6
-		  });
-		} else {
-		  // Reset style when deselected
-		  layer.setStyle({
-			color: "#3388ff",
-			fillColor: "#3388ff",
-			fillOpacity: 0
-		  });
-		}
-
-		updateClassIds();
-	  });
-	}
-
-
-  function loadSegmentLayer(url) {
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        segmentLayer = L.geoJSON(data, {
-          onEachFeature: onEachFeature,
-          style: {
-            color: "#3388ff",
-            weight: 1,
-            fillOpacity: 0
-          }
-        }).addTo(map);
-		layerControl.addOverlay(segmentLayer, "Segment Layer");
-      });
-  }
-
-  loadSegmentLayer("results/segment_wgs84.geojson");
-
-  // Initial run
-  generateClassControls();
-
-
-</script>
-
+  </script>
 </body>
 </html>
