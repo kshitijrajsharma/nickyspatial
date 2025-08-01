@@ -3,9 +3,9 @@
 
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 
 from .layer import Layer
 
@@ -57,15 +57,14 @@ class SupervisedClassifier:
         return layer
 
     def _train(self, features):
-        """
-        Train the classifier using the training samples and compute accuracy and feature importances.
+        """Train the classifier using the training samples and compute accuracy and feature importances.
 
         Parameters
         ----------
         features : list of str or None
             List of feature column names to use. If None, all columns except segment_id, geometry, and classification are used.
 
-        Returns
+        Returns:
         -------
         classifier : sklearn classifier object
             The trained classifier.
@@ -78,7 +77,7 @@ class SupervisedClassifier:
         if not self.features:
             self.features = self.training_layer.columns
         self.features = [col for col in self.features if col not in ["segment_id", "classification", "geometry"]]
-        
+
         x = self.training_layer[self.features]
         y = self.training_layer["classification"]
 
@@ -110,8 +109,6 @@ class SupervisedClassifier:
             raise ValueError(f"Unsupported classifier type: {self.classifier_type}")
 
         return self.classifier, test_accuracy, feature_importances
-
-
 
     def _prediction(self, layer):
         """Perform classification prediction on input layer features.
