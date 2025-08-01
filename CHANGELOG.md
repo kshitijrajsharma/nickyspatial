@@ -1,3 +1,12 @@
+## v1.0.0 (2025-08-01)
+
+### Fix
+
+- **naming**: changes resolution in segmentation to avoid potential
+- update Binder link and Python version in example notebook
+- **ci**: fixes ci to push pypi and then updates the URL
+- remove redundant --no-group option in dependency installation
+
 ## v0.2.0 (2025-05-15)
 
 ### Feat
