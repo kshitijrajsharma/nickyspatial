@@ -175,7 +175,7 @@ from .layer import Layer
 class CNNClassifier:
     """Implementation of CNN-based classification for image patches from segments."""
 
-    def __init__(self, name=None, patch_size=(5, 5), classifier_params=None):
+    def __init__(self, name=None, classifier_params=None):
         """Initialize the CNN classifier.
 
         Parameters:
@@ -188,10 +188,11 @@ class CNNClassifier:
             Parameters for CNN training (e.g., epochs, batch_size).
         """
         self.name = name if name else "CNN_Classification"
-        self.patch_size = patch_size
-        self.classifier_params = classifier_params if classifier_params else {"epochs": 10, "batch_size": 32}
+        # self.patch_size = patch_size
+        self.classifier_params = classifier_params if classifier_params else {"epochs": 10, "batch_size": 32,"patch_size": (5,5)}
         self.model = None
         self.le = LabelEncoder()
+        print(self.classifier_params['patch_size'],"patch size from params")
 
     def _extract_training_patches(self, image, segments, samples):
         """
@@ -208,7 +209,7 @@ class CNNClassifier:
         image = np.moveaxis(image, 0, -1)
         patches = []
         labels=[]
-        patch_size=self.patch_size
+        patch_size=self.classifier_params['patch_size']
         
         # Extract region properties
         props = regionprops(segments.raster)
@@ -217,7 +218,7 @@ class CNNClassifier:
         for key in samples.keys():
             segment_ids = samples[key]
             for seg_id in segment_ids:
-                print("segment_id", seg_id)
+                # print("segment_id", seg_id)
                 incount=0
                 outcount=0
                 region = segment_id_to_region.get(seg_id)
@@ -247,8 +248,8 @@ class CNNClassifier:
                             labels.append(key)
                         else:
                             outcount+=1
-                print("incount", incount)
-                print("outcount", outcount)
+                # print("incount", incount)
+                # print("outcount", outcount)
                 
 
         patches = np.array(patches)
@@ -271,7 +272,7 @@ class CNNClassifier:
         image = np.moveaxis(image, 0, -1)
         patches = []
         segment_ids=[]
-        patch_size=self.patch_size
+        patch_size=self.classifier_params['patch_size']
         
         # Extract region properties
         props = regionprops(segments.raster)
@@ -308,8 +309,8 @@ class CNNClassifier:
                         segment_ids.append(prop.label)
                     else:
                         outcount+=1
-            print("incount", incount)
-            print("outcount", outcount)
+            # print("incount", incount)
+            # print("outcount", outcount)
         patches = np.array(patches)
         print(f"Extracted {len(patches)} patches of shape {patches.shape[1:]}")
         # return patches, labels
@@ -318,9 +319,10 @@ class CNNClassifier:
     def _create_cnn_model(self, input_shape, num_classes):
         """Define a CNN model."""
         model = models.Sequential([
-            layers.Conv2D(32, (3,3), activation='relu', input_shape=input_shape),
+            layers.Input(shape=input_shape),
+            layers.Conv2D(32, (3,3), activation='relu', padding='same'),
             layers.MaxPooling2D((2,2)),
-            layers.Conv2D(64, (3,3), activation='relu'),
+            layers.Conv2D(64, (3,3), activation='relu',padding='same'),
             layers.MaxPooling2D((2,2)),
             layers.Flatten(),
             layers.Dense(64, activation='relu'),
@@ -333,14 +335,13 @@ class CNNClassifier:
             metrics=['accuracy']
         )
         # self.model=model
-
         return model
     
     def _train_model(self,patches_train,labels_train,patches_val,labels_val):
         history = self.model.fit(
             patches_train, labels_train,
-            epochs=20,
-            batch_size=32,
+            epochs=self.classifier_params['epochs'],
+            batch_size=self.classifier_params['batch_size'],
             validation_data=(patches_val, labels_val))
         return history
     
