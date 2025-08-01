@@ -140,11 +140,11 @@ function loadSegmentLayerFromFolder(url) {
 		console.log(data);
       })
 	  .catch(err => {
-		//console.warn("segment_wgs84.geojson not found. Loading fallback...");
+		//console.warn("segment.geojson not found. Loading fallback...");
 		//loadFallbackLayer();  // <-- call your alternative function here
 	  });
   }
-loadSegmentLayerFromFolder("results/segments.geojson");
+loadSegmentLayerFromFolder("results/segment.geojson");
 
 
 //first layer will be segment and other layers as other overlay layers. if the results folder contains geojson with exact name, it will be used, otherwise the first uploaded file.
@@ -531,11 +531,26 @@ function onEachFeature(feature, layer) {
 }
 
 function download_class_json(){
-	downloadJSON(classData);
+	downloadJSON(classData, "samples.json");
 }
 
-function downloadJSON(data, filename = "class_data.json") {
-  const jsonStr = JSON.stringify(data, null, 2); // Pretty print with 2 spaces
+function downloadJSON(classData, filename = "samples.json") {
+  const renamedData = {};
+
+  for (let originalKey in classData) {
+    const labelInput = document.getElementById(`label_${originalKey}`);
+    const newKey = labelInput?.value?.trim() || originalKey;
+	console.log(newKey);
+
+    // Merge or assign
+    if (renamedData[newKey]) {
+      renamedData[newKey] = renamedData[newKey].concat(classData[originalKey]);
+    } else {
+      renamedData[newKey] = [...classData[originalKey]];
+    }
+  }
+
+  const jsonStr = JSON.stringify(renamedData, null, 2);
   const blob = new Blob([jsonStr], { type: "application/json" });
   const url = URL.createObjectURL(blob);
 
@@ -544,7 +559,6 @@ function downloadJSON(data, filename = "class_data.json") {
   link.download = filename;
   link.click();
 
-  // Clean up
   URL.revokeObjectURL(url);
 }
 
@@ -575,7 +589,7 @@ function exportClassifications() {
   URL.revokeObjectURL(url);
 }
 
-function downloadJSON(data, filename) {
+function downloadJSON_(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -653,16 +667,27 @@ async function loadImageAsGeoRaster(file, name) {
     const arrayBuffer = await file.arrayBuffer();
     const georaster = await parseGeoraster(arrayBuffer);
 
+    // Define RGB bands (1-based index: band 3 = red, band 2 = green, band 1 = blue for true color)
+    const redBand = 3;
+    const greenBand = 2;
+    const blueBand = 1;
+
     const layer = new GeoRasterLayer({
       georaster,
-      opacity: 0.8,
+      opacity: 1,
       resolution: 128,
-	  maxZoom: 22
+      maxZoom: 22,
+      pixelValuesToColorFn: function(pixelValues) {
+        const r = pixelValues[redBand - 1];   // 0-based index
+        const g = pixelValues[greenBand - 1];
+        const b = pixelValues[blueBand - 1];
+        return `rgb(${r}, ${g}, ${b})`;
+      }
     }).addTo(map);
 
-	layerControl.addOverlay(layer, name);
-
+    layerControl.addOverlay(layer, name);
     map.fitBounds(layer.getBounds());
+
     document.getElementById("imageLoadStatus").innerText = "Image loaded successfully.";
   } catch (err) {
     console.error("Failed to load image as raster:", err);
