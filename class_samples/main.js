@@ -3,7 +3,7 @@ const map = L.map('map').setView([47.899167, 17.007472], 18);
   const baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 20, attribution: '© OpenStreetMap'
   }).addTo(map);
-  
+
   const orthoLayer = L.tileLayer('http://localhost:8000/{z}/{x}/{-y}.png', {
 	  minZoom: 0,
 	  maxZoom: 22,
@@ -25,7 +25,7 @@ const map = L.map('map').setView([47.899167, 17.007472], 18);
   };
 
  const layerControl = L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
- 
+
  const legendControl = L.control({ position: "bottomright" });
 
   legendControl.onAdd = function () {
@@ -120,7 +120,7 @@ function handleFileUpload(file) {
 function loadGeoJSONByPath() {
   const path = document.getElementById("geojsonPath").value.trim();
   const statusEl = document.getElementById("geojsonPathStatus");
-  
+
   if (!path || !path.endsWith(".geojson")) {
     statusEl.innerText = "Please enter a valid .geojson file path.";
     statusEl.style.color = "red";
@@ -151,7 +151,7 @@ loadSegmentLayerFromFolder("results/segment.geojson");
 function segmentLayerIdentify(name, geojson){
 	const type = Object.keys(layers).length === 0 ? "segment" : "viewer";
      addLayer(name, geojson, type);
-	 
+
 	 document.getElementById("url_input_geojson").style.display = "none";
 	 //show button to got to samples tab
 	 document.getElementById("showSamplesTabButton").style.display = "block";
@@ -180,19 +180,19 @@ function addLayer(name, geojson, type) {
 
   renderLayerList();
   showStyleOptions(name);
-  
+
 }
 
 
 function renderLayerList() {
   const list = document.getElementById("layerList");
   list.innerHTML = "";
-  
+
   // Add heading
   const heading = document.createElement("h4");
   heading.textContent = "Layers";
   list.appendChild(heading);
-	
+
   Object.entries(layers).forEach(([name, { type }]) => {
     const div = document.createElement("div");
     div.className = "layer-item" + (name === segmentLayerName ? " active" : "");
@@ -243,7 +243,7 @@ function showStyleOptions(layerName) {
     opt.text = `${attr} (${uniqueVals.length})`;
     opt.dataset.count = uniqueVals.length;
     attrSelect.appendChild(opt);
-	
+
 	attrCount ++;
   });
 
@@ -256,29 +256,29 @@ function showStyleOptions(layerName) {
       warning.textContent = "Warning: The style based on attribute could not be applied. The attribute '${attr}' has ${uniqueVals.length} unique values. Please select another with fewer unique values.";
       //console.log(layers[layerName]);
 	  if(!map.hasLayer(layers[layerName])){
-		renderDefaultLayer(layerName, attr);  
+		renderDefaultLayer(layerName, attr);
 		//console.log("inside add new layer to map")
 	  }
-	  
+
       return;
     }
 
     warning.style.display = "none";
     renderStyleMappingUI(layerName, attr, uniqueVals);
   };
-  
+
   //attrSelect.selectedIndex = attrCount-1;
 
   attrSelect.dispatchEvent(new Event("change"));
 }
 
 function renderDefaultLayer(layerName, attr) {
-   
+
   const { layer } = layers[layerName];
   // if (currentStyledLayer) map.removeLayer(currentStyledLayer);
   // currentStyledLayer = L.geoJSON(layer.toGeoJSON()).addTo(map);
   addStyledLayer(layerName, attr);
-  
+
 }
 
 function generateRandomColor() {
@@ -350,12 +350,12 @@ function renderStyleMappingUI(layerName, attr, values) {
 		  applyStyledLayer(layerName, attr);
 		});
 	  });
-	  
+
 	applyStyledLayer(layerName, attr);
   });
 
 
-  
+
 }
 
 
@@ -371,7 +371,7 @@ function addStyledLayer(layerName, attr) {
     map.removeLayer(leafletLayer);
     layerControl.removeLayer(leafletLayer);
   }
-	
+
   const styleFn = feature => {
     const val = (feature.properties[attr] || "").toString().trim();
     const style = attributeStyleMap[val] || {};
@@ -393,7 +393,7 @@ function addStyledLayer(layerName, attr) {
 
   layers[layerName].leafletLayer = layer;
   layerControl.addOverlay(layer, layerName);
-  
+
    if (type === 'segment') {
     segmentLayer = layer;
     document.getElementById("classificationTool").style.display = "block";
@@ -524,12 +524,12 @@ function onEachFeature(feature, layer) {
     }
 	//console.log("clicked")
     updateClassIds();
-	
-	
+
+
 	//console.log("class data", classData);
   });
 }
-  
+
 function download_class_json(){
 	downloadJSON(classData, "samples.json");
 }
@@ -694,4 +694,3 @@ async function loadImageAsGeoRaster(file, name) {
     alert("Could not display raster image. Make sure it's a valid georeferenced TIFF or supported image format.");
   }
 }
-
