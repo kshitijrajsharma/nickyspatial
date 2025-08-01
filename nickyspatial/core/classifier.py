@@ -435,6 +435,4 @@ class CNNClassifier:
         if layer_manager:
             layer_manager.add_layer(result_layer)
 
-        return result_layer, accuracy
-
-        
+        return result_layer, history, accuracy

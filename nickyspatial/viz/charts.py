@@ -4,7 +4,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-
+import numpy as np
 
 def plot_histogram(layer, attribute, bins=20, figsize=(10, 6), by_class=None):
     """Plot a histogram of attribute values.
@@ -179,3 +179,63 @@ def plot_scatter(layer, x_attribute, y_attribute, color_by=None, figsize=(10, 8)
     ax.grid(alpha=0.3)
 
     return fig
+
+
+def plot_training_history(history):
+    """
+    Plot (training and validation) loss and accuracy curves from a Keras(CNN) training history.
+
+    This function visualizes the model's performance over epochs by plotting:
+    - Training and validation loss
+    - Training and validation accuracy
+
+    Parameters
+    ----------
+    history : keras.callbacks.History
+        History object returned by `model.fit()`, containing loss and accuracy values
+        for each epoch.
+    Returns
+    -------
+    matplotlib.pyplot
+        The pyplot module with the generated figure, allowing further modification or saving.
+    """
+
+    epoches = np.arange(1, len(history.history.get('loss')) + 1)
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, sharex=True, figsize=(15, 7))  # Removed sharey=True
+
+    # Extract Loss Values
+    train_loss = history.history.get('loss')
+    val_loss = history.history.get('val_loss')
+
+    # Extract Accuracy Values (Scaled to Percentage)
+    train_acc = [x * 100 for x in history.history.get('accuracy')]
+    val_acc = [x * 100 for x in history.history.get('val_accuracy')]
+
+    # --- Plot Training & Validation Loss ---
+    ax1.plot(epoches, train_loss, 'b', marker='o', label='Training Loss')
+    ax1.plot(epoches, val_loss, 'r', marker='o', label='Validation Loss')
+    ax1.set_title('Training and Validation Loss', fontsize=16)
+    ax1.set_ylabel('Loss', fontsize=14)
+    ax1.legend(fontsize=13)
+    ax1.tick_params(axis='x', labelsize=14)  
+    ax1.tick_params(axis='y', labelsize=14)
+    
+    # Dynamically adjust the Y-Axis range for loss
+    ax1.set_ylim(min(train_loss + val_loss) * 0.9, max(train_loss + val_loss) * 1.1)
+    ax1.set_yticks(np.linspace(min(train_loss + val_loss), max(train_loss + val_loss), num=5))  # 5 evenly spaced ticks
+
+    # --- Plot Training & Validation Accuracy ---
+    ax2.plot(epoches, train_acc, 'b', marker='o', label='Training Accuracy')
+    ax2.plot(epoches, val_acc, 'r', marker='o', label='Validation Accuracy')
+    ax2.set_title('Training and Validation Accuracy', fontsize=16)
+    ax2.set_ylabel('Accuracy (%)', fontsize=14)  # Accuracy in Percentage
+    ax2.legend(fontsize=13)
+    ax2.tick_params(axis='x', labelsize=14)  
+    ax2.tick_params(axis='y', labelsize=14)
+
+    # Dynamically adjust the Y-Axis range for accuracy
+    ax2.set_ylim(min(train_acc + val_acc) * 0.9, max(train_acc + val_acc) * 1.1)
+    ax2.set_yticks(np.linspace(min(train_acc + val_acc), max(train_acc + val_acc), num=5))  # 5 evenly spaced ticks
+    # plt.show()
+    return plt
