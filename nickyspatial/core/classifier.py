@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from collections import defaultdict, Counter
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 class SupervisedClassifier:
     """Implementation of Supervised Classification algorithm."""
@@ -191,7 +192,7 @@ class CNNClassifier:
         """
         self.name = name if name else "CNN_Classification"
         # self.patch_size = patch_size
-        self.classifier_params = classifier_params if classifier_params else {"epochs": 10, "batch_size": 32,"patch_size": (5,5)}
+        self.classifier_params = classifier_params if classifier_params else {"epochs": 50, "batch_size": 32,"patch_size": (5,5)}
         self.model = None
         self.le = LabelEncoder()
         # print(self.classifier_params['patch_size'],"patch size from params")
@@ -340,14 +341,25 @@ class CNNClassifier:
         return model
     
     def _train_model(self,patches_train,labels_train,patches_val,labels_val):
+        # Define early stopping callback
+        early_stopping = EarlyStopping(
+            monitor='val_loss',    # Can use 'val_accuracy' if preferred
+            patience=5,            # Stop training after 5 epochs of no improvement
+            restore_best_weights=True,  # Restore the best weights from the epoch with the lowest validation loss
+            verbose=1              # Print messages when early stopping is triggered
+        )
+
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-7)
+                
         history = self.model.fit(
             patches_train, labels_train,
             epochs=self.classifier_params['epochs'],
             batch_size=self.classifier_params['batch_size'],
-            validation_data=(patches_val, labels_val))
+            validation_data=(patches_val, labels_val),
+            callbacks=[early_stopping,reduce_lr]
+        )
         return history
-    
-
+  
     def _prediction(self, patches,segment_ids):
         predictions = self.model.predict(patches)
         predicted_classes = predictions.argmax(axis=1)
