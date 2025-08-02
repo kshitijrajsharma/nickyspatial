@@ -7,6 +7,8 @@ from sklearn.ensemble import RandomForestClassifier
 from .layer import Layer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
+from collections import defaultdict, Counter
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 class SupervisedClassifier:
     """Implementation of Supervised Classification algorithm."""
@@ -192,7 +194,7 @@ class CNNClassifier:
         self.classifier_params = classifier_params if classifier_params else {"epochs": 10, "batch_size": 32,"patch_size": (5,5)}
         self.model = None
         self.le = LabelEncoder()
-        print(self.classifier_params['patch_size'],"patch size from params")
+        # print(self.classifier_params['patch_size'],"patch size from params")
 
     def _extract_training_patches(self, image, segments, samples):
         """
@@ -253,7 +255,7 @@ class CNNClassifier:
                 
 
         patches = np.array(patches)
-        print(f"Extracted {len(patches)} patches of shape {patches.shape[1:]}")
+        print(f"Extracted {len(patches)} training patches of shape {patches.shape[1:]}")
         return patches, labels
     
 
@@ -281,12 +283,12 @@ class CNNClassifier:
         for prop in props:
             incount=0
             outcount=0
-            print(prop.label)
+            # print(prop.label)
             # centroid=prop.centroid
             # print(centroid)
             bbox=prop.bbox #min_row, min_col, max_row, max_col
             min_row, min_col, max_row, max_col= bbox[0],bbox[1],bbox[2],bbox[3]
-            print(min_row, min_col, max_row, max_col)
+            # print(min_row, min_col, max_row, max_col)
 
             n_row_patches= (max_row-min_row) // patch_size[0]
             n_col_patches= (max_col-min_col) // patch_size[1]
@@ -300,7 +302,7 @@ class CNNClassifier:
                     col_end = col_start + patch_size[1]
                     
                     mask= (segments.raster[row_start:row_end, col_start:col_end] == prop.label)
-                    print(mask)
+                    # print(mask)
                     if np.all(mask):
                         incount+=1
                         patch = image[row_start:row_end, col_start:col_end]
@@ -312,7 +314,7 @@ class CNNClassifier:
             # print("incount", incount)
             # print("outcount", outcount)
         patches = np.array(patches)
-        print(f"Extracted {len(patches)} patches of shape {patches.shape[1:]}")
+        # print(f"Extracted {len(patches)} patches of shape {patches.shape[1:]}")
         # return patches, labels
         return patches,  segment_ids
 
@@ -351,8 +353,6 @@ class CNNClassifier:
         predicted_classes = predictions.argmax(axis=1)
         predicted_labels = self.le.inverse_transform(predicted_classes)
 
-        from collections import defaultdict, Counter
-
         # Step 1: collect predicted labels per segment
         segment_label_map = defaultdict(list)
 
@@ -367,11 +367,43 @@ class CNNClassifier:
             most_common_label = Counter(labels).most_common(1)[0][0]
             final_segment_ids.append(seg_id)
             final_labels.append(most_common_label)
-
-        print(len(final_segment_ids))
-        print(len(final_labels))
-
+        # print(len(final_segment_ids))
+        # print(len(final_labels))
         return final_segment_ids, final_labels
+    
+    def _evaluate(self, patches_test, labels_test):
+        predictions = self.model.predict(patches_test)
+        predicted_classes = predictions.argmax(axis=1)
+
+        # # Convert ground truth labels to class indices if necessary
+        # if hasattr(self, 'le'):
+        #     # If labels_test are strings, encode them to indices
+        #     true_classes = self.le.transform(labels_test)
+        #     # Also get back predicted labels (strings)
+        #     predicted_labels = self.le.inverse_transform(predicted_classes)
+        # else:
+        #     # Otherwise assume labels_test are already numeric
+        #     true_classes = labels_test
+        #     predicted_labels = predicted_classes
+
+        # Compute accuracy
+        accuracy = accuracy_score(labels_test, predicted_classes)
+
+        # Compute confusion matrix
+        conf_matrix = confusion_matrix(labels_test, predicted_classes)
+
+        # Classification report
+        report = classification_report(labels_test, predicted_classes, target_names=self.le.classes_)
+        
+        return {"accuracy":accuracy,"confusion_matrix":conf_matrix,"report":report}
+        # print("Evaluation Results:")
+        # print(f"Accuracy: {acc:.4f}")
+        # print("Confusion Matrix:")
+        # print(cm)
+        # print("Classification Report:")
+        # print(report)
+
+
 
     def execute(self, source_layer, samples, image_data, layer_manager=None, layer_name=None):
         """Execute CNN-based classification.
@@ -404,11 +436,14 @@ class CNNClassifier:
         patches, labels = self._extract_training_patches(image=image_data, segments=source_layer, samples=samples)
         labels_encoded = self.le.fit_transform(labels)
         num_classes = len(self.le.classes_)
-        print("Classes:", self.le.classes_)
+        # print("Classes:", self.le.classes_)
         patches = patches.astype('float32') / 255.0
         
+        patches_temp, patches_test, labels_temp, labels_test = train_test_split(
+            patches, labels_encoded, test_size=0.3, random_state=42)
+        
         patches_train, patches_val, labels_train, labels_val = train_test_split(
-            patches, labels_encoded, test_size=0.2, random_state=42)
+            patches_temp, labels_temp, test_size=0.2, random_state=42)
 
         # input_shape = (self.patch_size[0], self.patch_size[1], 3)
         input_shape = patches.shape[1:]
@@ -418,10 +453,18 @@ class CNNClassifier:
         history=self._train_model(patches_train,labels_train,patches_val,labels_val)
         
         # history = self.classifier.fit(patches, labels, **self.classifier_params, validation_split=0.2, verbose=0)
-        accuracy = history.history['val_accuracy'][-1]
+        # accuracy = history.history['val_accuracy'][-1]
+         
 
         patches_all, segment_ids = self._extract_patches_for_prediction(image=image_data, segments=source_layer )
 
+        eval_result= self._evaluate( patches_test, labels_test)
+        print("Evaluation Results:")
+        print(f"Accuracy: {eval_result["accuracy"]}")
+        print("Confusion Matrix:")
+        print(eval_result["confusion_matrix"])
+        print("Classification Report:")
+        print(eval_result["report"])
 
         final_segment_ids, final_labels =self._prediction(patches_all, segment_ids)
 
@@ -435,4 +478,4 @@ class CNNClassifier:
         if layer_manager:
             layer_manager.add_layer(result_layer)
 
-        return result_layer, history, accuracy
+        return result_layer, history, eval_result
