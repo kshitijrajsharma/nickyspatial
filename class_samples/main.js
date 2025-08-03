@@ -3,7 +3,7 @@ const map = L.map('map').setView([47.899167, 17.007472], 18);
   const baseLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 20, attribution: '© OpenStreetMap'
   }).addTo(map);
-
+  
   const orthoLayer = L.tileLayer('http://localhost:8000/{z}/{x}/{-y}.png', {
 	  minZoom: 0,
 	  maxZoom: 22,
@@ -25,7 +25,7 @@ const map = L.map('map').setView([47.899167, 17.007472], 18);
   };
 
  const layerControl = L.control.layers(baseMaps, overlayMaps, { collapsed: false }).addTo(map);
-
+ 
  const legendControl = L.control({ position: "bottomright" });
 
   legendControl.onAdd = function () {
@@ -43,6 +43,29 @@ let currentStyledLayer = null;
 let segmentLayerName = null;
 let classColors = {}, classData = {}, currentClassKey = null;
 let attributeStyleMap = {};
+
+
+function fixMultiPolygonNesting(geojson) {
+  geojson.features = geojson.features.map(feature => {
+    if (feature.geometry.type === "MultiPolygon") {
+      const coords = feature.geometry.coordinates;
+
+      // Check for nested depth, then flatten if needed
+      const flattened = coords.map(polygon => {
+        return polygon.map(ring => {
+          // If a ring has more than 1 element and the first element isn't an array of numbers,
+          // it's likely [ [ [x, y], ... ] ]
+          if (Array.isArray(ring[0][0])) return ring;
+          else return [ring];  // wrap in another array
+        });
+      });
+
+      feature.geometry.coordinates = flattened;
+    }
+    return feature;
+  });
+  return geojson;
+}
 
 const dropZone = document.getElementById("dropZone");
 
@@ -120,7 +143,7 @@ function handleFileUpload(file) {
 function loadGeoJSONByPath() {
   const path = document.getElementById("geojsonPath").value.trim();
   const statusEl = document.getElementById("geojsonPathStatus");
-
+  
   if (!path || !path.endsWith(".geojson")) {
     statusEl.innerText = "Please enter a valid .geojson file path.";
     statusEl.style.color = "red";
@@ -151,7 +174,7 @@ loadSegmentLayerFromFolder("results/segment.geojson");
 function segmentLayerIdentify(name, geojson){
 	const type = Object.keys(layers).length === 0 ? "segment" : "viewer";
      addLayer(name, geojson, type);
-
+	 
 	 document.getElementById("url_input_geojson").style.display = "none";
 	 //show button to got to samples tab
 	 document.getElementById("showSamplesTabButton").style.display = "block";
@@ -164,6 +187,11 @@ function enableClassificationUI() {
 
 
 function addLayer(name, geojson, type) {
+  
+  //geojson = fixMultiPolygonNesting(geojson);
+  //console.log(JSON.stringify(fixedGeojson.features[0].geometry, null, 2));
+  //console.log(geojson);
+  
   console.log("layer_type:",type, name, geojson);
   if (layers[name]) {
     alert(`Layer '${name}' already exists.`);
@@ -171,7 +199,7 @@ function addLayer(name, geojson, type) {
   }
   const layer = L.geoJSON(geojson);
   layers[name] = { layer, geojson, type };
-  console.log("geojson added")
+  console.log("geojson added", layers[name])
   if (type === "segment") {
     segmentLayerName = name;
     generateClassControls();
@@ -180,19 +208,19 @@ function addLayer(name, geojson, type) {
 
   renderLayerList();
   showStyleOptions(name);
-
+  
 }
 
 
 function renderLayerList() {
   const list = document.getElementById("layerList");
   list.innerHTML = "";
-
+  
   // Add heading
   const heading = document.createElement("h4");
   heading.textContent = "Layers";
   list.appendChild(heading);
-
+	
   Object.entries(layers).forEach(([name, { type }]) => {
     const div = document.createElement("div");
     div.className = "layer-item" + (name === segmentLayerName ? " active" : "");
@@ -243,7 +271,7 @@ function showStyleOptions(layerName) {
     opt.text = `${attr} (${uniqueVals.length})`;
     opt.dataset.count = uniqueVals.length;
     attrSelect.appendChild(opt);
-
+	
 	attrCount ++;
   });
 
@@ -256,29 +284,29 @@ function showStyleOptions(layerName) {
       warning.textContent = "Warning: The style based on attribute could not be applied. The attribute '${attr}' has ${uniqueVals.length} unique values. Please select another with fewer unique values.";
       //console.log(layers[layerName]);
 	  if(!map.hasLayer(layers[layerName])){
-		renderDefaultLayer(layerName, attr);
+		renderDefaultLayer(layerName, attr);  
 		//console.log("inside add new layer to map")
 	  }
-
+	  
       return;
     }
 
     warning.style.display = "none";
     renderStyleMappingUI(layerName, attr, uniqueVals);
   };
-
+  
   //attrSelect.selectedIndex = attrCount-1;
 
   attrSelect.dispatchEvent(new Event("change"));
 }
 
 function renderDefaultLayer(layerName, attr) {
-
+   
   const { layer } = layers[layerName];
   // if (currentStyledLayer) map.removeLayer(currentStyledLayer);
   // currentStyledLayer = L.geoJSON(layer.toGeoJSON()).addTo(map);
   addStyledLayer(layerName, attr);
-
+  
 }
 
 function generateRandomColor() {
@@ -350,13 +378,15 @@ function renderStyleMappingUI(layerName, attr, values) {
 		  applyStyledLayer(layerName, attr);
 		});
 	  });
-
+	  
 	applyStyledLayer(layerName, attr);
+	//console.log(layerName);
   });
 
 
-
+  
 }
+
 
 
 function addStyledLayer(layerName, attr) {
@@ -371,13 +401,13 @@ function addStyledLayer(layerName, attr) {
     map.removeLayer(leafletLayer);
     layerControl.removeLayer(leafletLayer);
   }
-
+	
   const styleFn = feature => {
     const val = (feature.properties[attr] || "").toString().trim();
     const style = attributeStyleMap[val] || {};
 
     return {
-      color: style.color || "#000",
+      color: style.color || "red",
       fillColor: style.fillColor || "#fff",
       weight: style.weight ?? 1,
       opacity: style.opacity ?? 1,
@@ -393,7 +423,7 @@ function addStyledLayer(layerName, attr) {
 
   layers[layerName].leafletLayer = layer;
   layerControl.addOverlay(layer, layerName);
-
+  
    if (type === 'segment') {
     segmentLayer = layer;
     document.getElementById("classificationTool").style.display = "block";
@@ -405,6 +435,7 @@ function addStyledLayer(layerName, attr) {
 
 
 function applyStyledLayer(layerName, attr) {
+  //console.log(layers[layerName])
   const layerObj = layers[layerName];
   if (!layerObj || !layerObj.leafletLayer) {
     console.warn(`Layer not found or not yet added: ${layerName}`);
@@ -511,9 +542,9 @@ function onEachFeature(feature, layer) {
     if (!alreadyInClass) {
       classData[currentClassKey].push(fid);
       layer.setStyle({
-        color: classColors[currentClassKey],
+        color: "#3388ff", //classColors[currentClassKey],
         fillColor: classColors[currentClassKey],
-        fillOpacity: 0.3
+        fillOpacity: 0.6
       });
     } else {
       layer.setStyle({
@@ -524,12 +555,12 @@ function onEachFeature(feature, layer) {
     }
 	//console.log("clicked")
     updateClassIds();
-
-
+	
+	
 	//console.log("class data", classData);
   });
 }
-
+  
 function download_class_json(){
 	downloadJSON(classData, "samples.json");
 }
@@ -666,24 +697,37 @@ async function loadImageAsGeoRaster(file, name) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const georaster = await parseGeoraster(arrayBuffer);
+	console.log(georaster)
 
     // Define RGB bands (1-based index: band 3 = red, band 2 = green, band 1 = blue for true color)
     const redBand = 3;
     const greenBand = 2;
     const blueBand = 1;
 
-    const layer = new GeoRasterLayer({
-      georaster,
-      opacity: 1,
-      resolution: 128,
-      maxZoom: 22,
-      pixelValuesToColorFn: function(pixelValues) {
-        const r = pixelValues[redBand - 1];   // 0-based index
-        const g = pixelValues[greenBand - 1];
-        const b = pixelValues[blueBand - 1];
-        return `rgb(${r}, ${g}, ${b})`;
-      }
-    }).addTo(map);
+    const min = georaster.mins[0];
+	const max = georaster.maxs[0];
+
+	const layer = new GeoRasterLayer({
+	  georaster,
+	  opacity: 1,
+	  resolution: 128,
+	  maxZoom: 22,
+	  pixelValuesToColorFn: function(pixelValues) {
+		if (pixelValues.length === 1) {
+		  // single-band grayscale
+		  const value = pixelValues[0];
+		  const scaled = Math.round(255 * (value - min) / (max - min));
+		  return `rgb(${scaled}, ${scaled}, ${scaled})`;
+		} else {
+		  // multi-band RGB
+		  const r = pixelValues[redBand - 1];
+		  const g = pixelValues[greenBand - 1];
+		  const b = pixelValues[blueBand - 1];
+		  return `rgb(${r}, ${g}, ${b})`;
+		}
+	  }
+	}).addTo(map);
+
 
     layerControl.addOverlay(layer, name);
     map.fitBounds(layer.getBounds());
@@ -694,3 +738,4 @@ async function loadImageAsGeoRaster(file, name) {
     alert("Could not display raster image. Make sure it's a valid georeferenced TIFF or supported image format.");
   }
 }
+
