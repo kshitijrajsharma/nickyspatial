@@ -44,6 +44,29 @@ let segmentLayerName = null;
 let classColors = {}, classData = {}, currentClassKey = null;
 let attributeStyleMap = {};
 
+
+function fixMultiPolygonNesting(geojson) {
+  geojson.features = geojson.features.map(feature => {
+    if (feature.geometry.type === "MultiPolygon") {
+      const coords = feature.geometry.coordinates;
+
+      // Check for nested depth, then flatten if needed
+      const flattened = coords.map(polygon => {
+        return polygon.map(ring => {
+          // If a ring has more than 1 element and the first element isn't an array of numbers,
+          // it's likely [ [ [x, y], ... ] ]
+          if (Array.isArray(ring[0][0])) return ring;
+          else return [ring];  // wrap in another array
+        });
+      });
+
+      feature.geometry.coordinates = flattened;
+    }
+    return feature;
+  });
+  return geojson;
+}
+
 const dropZone = document.getElementById("dropZone");
 
 dropZone.addEventListener("click", () => {
@@ -164,6 +187,11 @@ function enableClassificationUI() {
 
 
 function addLayer(name, geojson, type) {
+
+  //geojson = fixMultiPolygonNesting(geojson);
+  //console.log(JSON.stringify(fixedGeojson.features[0].geometry, null, 2));
+  //console.log(geojson);
+
   console.log("layer_type:",type, name, geojson);
   if (layers[name]) {
     alert(`Layer '${name}' already exists.`);
@@ -171,7 +199,7 @@ function addLayer(name, geojson, type) {
   }
   const layer = L.geoJSON(geojson);
   layers[name] = { layer, geojson, type };
-  console.log("geojson added")
+  console.log("geojson added", layers[name])
   if (type === "segment") {
     segmentLayerName = name;
     generateClassControls();
@@ -352,11 +380,13 @@ function renderStyleMappingUI(layerName, attr, values) {
 	  });
 
 	applyStyledLayer(layerName, attr);
+	//console.log(layerName);
   });
 
 
 
 }
+
 
 
 function addStyledLayer(layerName, attr) {
@@ -377,7 +407,7 @@ function addStyledLayer(layerName, attr) {
     const style = attributeStyleMap[val] || {};
 
     return {
-      color: style.color || "#000",
+      color: style.color || "red",
       fillColor: style.fillColor || "#fff",
       weight: style.weight ?? 1,
       opacity: style.opacity ?? 1,
@@ -405,6 +435,7 @@ function addStyledLayer(layerName, attr) {
 
 
 function applyStyledLayer(layerName, attr) {
+  //console.log(layers[layerName])
   const layerObj = layers[layerName];
   if (!layerObj || !layerObj.leafletLayer) {
     console.warn(`Layer not found or not yet added: ${layerName}`);
@@ -511,9 +542,9 @@ function onEachFeature(feature, layer) {
     if (!alreadyInClass) {
       classData[currentClassKey].push(fid);
       layer.setStyle({
-        color: classColors[currentClassKey],
+        color: "#3388ff", //classColors[currentClassKey],
         fillColor: classColors[currentClassKey],
-        fillOpacity: 0.3
+        fillOpacity: 0.6
       });
     } else {
       layer.setStyle({
@@ -666,24 +697,37 @@ async function loadImageAsGeoRaster(file, name) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const georaster = await parseGeoraster(arrayBuffer);
+	console.log(georaster)
 
-    // Define RGB bands (1-based index: band 3 = red, band 2 = green, band 1 = blue for true color)
-    const redBand = 3;
-    const greenBand = 2;
-    const blueBand = 1;
+  // Define RGB bands (1-based index: band 3 = red, band 2 = green, band 1 = blue for true color)
+  const redBand = 3;
+  const greenBand = 2;
+  const blueBand = 1;
 
-    const layer = new GeoRasterLayer({
-      georaster,
-      opacity: 1,
-      resolution: 128,
-      maxZoom: 22,
-      pixelValuesToColorFn: function(pixelValues) {
-        const r = pixelValues[redBand - 1];   // 0-based index
-        const g = pixelValues[greenBand - 1];
-        const b = pixelValues[blueBand - 1];
-        return `rgb(${r}, ${g}, ${b})`;
-      }
-    }).addTo(map);
+  const min = georaster.mins[0];
+	const max = georaster.maxs[0];
+
+	const layer = new GeoRasterLayer({
+	  georaster,
+	  opacity: 1,
+	  resolution: 128,
+	  maxZoom: 22,
+	  pixelValuesToColorFn: function(pixelValues) {
+		if (pixelValues.length === 1) {
+		  // single-band grayscale
+		  const value = pixelValues[0];
+		  const scaled = Math.round(255 * (value - min) / (max - min));
+		  return `rgb(${scaled}, ${scaled}, ${scaled})`;
+		} else {
+		  // multi-band RGB
+		  const r = pixelValues[redBand - 1];
+		  const g = pixelValues[greenBand - 1];
+		  const b = pixelValues[blueBand - 1];
+		  return `rgb(${r}, ${g}, ${b})`;
+		}
+	  }
+	}).addTo(map);
+
 
     layerControl.addOverlay(layer, name);
     map.fitBounds(layer.getBounds());
