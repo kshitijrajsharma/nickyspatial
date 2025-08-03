@@ -699,12 +699,12 @@ async function loadImageAsGeoRaster(file, name) {
     const georaster = await parseGeoraster(arrayBuffer);
 	console.log(georaster)
 
-    // Define RGB bands (1-based index: band 3 = red, band 2 = green, band 1 = blue for true color)
-    const redBand = 3;
-    const greenBand = 2;
-    const blueBand = 1;
+  // Define RGB bands (1-based index: band 3 = red, band 2 = green, band 1 = blue for true color)
+  const redBand = 3;
+  const greenBand = 2;
+  const blueBand = 1;
 
-    const min = georaster.mins[0];
+  const min = georaster.mins[0];
 	const max = georaster.maxs[0];
 
 	const layer = new GeoRasterLayer({
