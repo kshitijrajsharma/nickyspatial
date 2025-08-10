@@ -19,7 +19,7 @@ Key features:
 __version__ = "0.2.0"
 __author__ = "Kshitij Raj Sharma"
 
-from .core.classifier import SupervisedClassifier, CNNClassifier
+from .core.classifier import SupervisedClassifier, SupervisedClassifierDL
 from .core.layer import Layer, LayerManager
 from .core.rules import EnclosedByRuleSet, MergeRuleSet, Rule, RuleSet, TouchedByRuleSet
 from .core.segmentation import SlicSegmentation

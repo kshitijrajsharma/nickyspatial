@@ -175,10 +175,11 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 from .layer import Layer
 
-class CNNClassifier:
+class SupervisedClassifierDL:
+# CNNClassifier:
     """Implementation of CNN-based classification for image patches from segments."""
 
-    def __init__(self, name=None, classifier_params=None):
+    def __init__(self, name=None, classifier_type="Concolution Neural Network (CNN)", classifier_params=None):
         """Initialize the CNN classifier.
 
         Parameters:
@@ -191,11 +192,10 @@ class CNNClassifier:
             Parameters for CNN training (e.g., epochs, batch_size).
         """
         self.name = name if name else "CNN_Classification"
-        # self.patch_size = patch_size
+        self.classifier_type = classifier_type
         self.classifier_params = classifier_params if classifier_params else {"epochs": 50, "batch_size": 32,"patch_size": (5,5)}
         self.model = None
         self.le = LabelEncoder()
-        # print(self.classifier_params['patch_size'],"patch size from params")
 
     def _extract_training_patches(self, image, segments, samples):
         """
@@ -415,8 +415,6 @@ class CNNClassifier:
         # print("Classification Report:")
         # print(report)
 
-
-
     def execute(self, source_layer, samples, image_data, layer_manager=None, layer_name=None):
         """Execute CNN-based classification.
 
@@ -445,6 +443,8 @@ class CNNClassifier:
         result_layer.crs = source_layer.crs
 
         layer = source_layer.objects.copy()
+        # image_data=source_layer.raster.copy()
+        # print(image_data,"image_data")
         patches, labels = self._extract_training_patches(image=image_data, segments=source_layer, samples=samples)
         labels_encoded = self.le.fit_transform(labels)
         num_classes = len(self.le.classes_)
@@ -461,12 +461,13 @@ class CNNClassifier:
         input_shape = patches.shape[1:]
         num_classes = len(np.unique(labels))
 
-        self.model = self._create_cnn_model(input_shape, num_classes)
+        if self.classifier_type == "Convolution Neural Network (CNN)":
+            self.model = self._create_cnn_model(input_shape, num_classes)
+
         history=self._train_model(patches_train,labels_train,patches_val,labels_val)
         
         # history = self.classifier.fit(patches, labels, **self.classifier_params, validation_split=0.2, verbose=0)
         # accuracy = history.history['val_accuracy'][-1]
-         
 
         patches_all, segment_ids = self._extract_patches_for_prediction(image=image_data, segments=source_layer )
 
