@@ -38,8 +38,8 @@ from nickyspatial import (
     layer_to_vector,
     plot_classification,
     plot_layer,
+    plot_training_history,
     read_raster,
-    plot_training_history
 )
 
 st.set_page_config(page_title="nickyspatial - Remote Sensing Analysis", page_icon="#", layout="wide")
@@ -185,21 +185,28 @@ def perform_supervised_classification(layer, selected_classifier, classifier_par
     except Exception as e:
         st.error(f"Error during supervised classification: {str(e)}")
         return None
-    
-def perform_supervised_classification_DL(layer,image_data, selected_classifier, classifier_params, classification_name):
+
+
+def perform_supervised_classification_dl(layer, image_data, selected_classifier, classifier_params, classification_name):
     """Perform segmentation on the image data."""
     try:
         with st.spinner("Performing supervised classification..."):
             samples = {}
             for key in list(st.session_state.classes.keys()):
                 samples[key] = st.session_state.classes[key]["sample_ids"]
+            
+            st.write(f"{classifier_params} : classifier_params")
 
             classifier = SupervisedClassifierDL(
                 name="CNN Classification", classifier_type=selected_classifier, classifier_params=classifier_params
             )
 
-            classification_layer, model_history, eval_resul= classifier.execute(
-                layer, samples=samples,image_data=image_data, layer_manager=st.session_state.manager, layer_name=classification_name
+            classification_layer, model_history, eval_resul = classifier.execute(
+                layer,
+                samples=samples,
+                image_data=image_data,
+                layer_manager=st.session_state.manager,
+                layer_name=classification_name,
             )
 
             st.session_state.layers[classification_name] = classification_layer
@@ -1288,25 +1295,28 @@ def render_supervised_classification_deeplearning(index):
                     "Choose a classifier", options=classifier_list, index=0, key=f"select_dl_classifier_{index}"
                 )
             with col3:
-                classification_name = st.text_input("Layer Name", "Supervised_Classification", key=f"dl_classification_name_{index}")
-            col1a, col1b, col1c = st.columns(3)
+                classification_name = st.text_input(
+                    "Layer Name", "Supervised_Classification", key=f"dl_classification_name_{index}"
+                )
+            col1a, col1b, col1c,col1d = st.columns(4)
             if selected_classifier == "Convolution Neural Network (CNN)":
                 with col1a:
-                    patch_size_list = [(5,5),(8,8),(16,16)]
+                    patch_size_list = [(5, 5), (8, 8), (16, 16)]
                     patch_size = st.selectbox(
-                    "Choose a patch size", options=patch_size_list, index=0, key=f"select_dl_patch_size_{index}"
-                )
+                        "Choose a patch size", options=patch_size_list, index=0, key=f"select_dl_patch_size_{index}"
+                    )
                     # patch_size = st.number_input(
                     #     "Patch Size", min_value=10, max_value=500, value=20, step=10, key=f"patch_size_{index}"
                     # )
                 with col1b:
-                   batch_size = st.number_input(
+                    batch_size = st.number_input(
                         "Batch Size", min_value=8, max_value=256, value=16, step=16, key=f"batch_size_{index}"
                     )
                 with col1c:
-                    epochs = st.number_input(
-                        "Epochs", min_value=10, max_value=1000, value=30, step=20, key=f"epoch_{index}"
-                    )
+                    epochs = st.number_input("Epochs", min_value=10, max_value=1000, value=30, step=20, key=f"epoch_{index}")
+                with col1d:
+                    early_stopping_patience = st.number_input("Early Stopping Patience", min_value=5, max_value=20, value=5, step=5, key=f"early_stopping_{index}")
+                
             # features_options = (
             #     st.session_state.layers[seg_layer_name]
             #     .objects.drop(columns=["segment_id", "classification", "geometry"], errors="ignore")
@@ -1321,15 +1331,15 @@ def render_supervised_classification_deeplearning(index):
 
             apply_button = st.button("Execute", key=f"execute_dl_classification_{index}")
             if apply_button:
-                classifier_params = {"patch_size": patch_size, "batch_size": batch_size, "epochs": epochs}
+                classifier_params = {"patch_size": patch_size, "batch_size": batch_size, "epochs": epochs, "early_stopping_patience": early_stopping_patience}
                 # seg_layer_name = st.session_state.active_segmentation_layer_name
 
                 layer = st.session_state.layers[seg_layer_name]
-                image_data= st.session_state.image_data
+                image_data = st.session_state.image_data
                 if classification_name in list(st.session_state.layers.keys()):
                     st.error("Layer name already exists")
                     st.stop()
-                classification_layer, model_history, eval_resul = perform_supervised_classification_DL(
+                classification_layer, model_history, eval_resul = perform_supervised_classification_dl(
                     layer, image_data, selected_classifier, classifier_params, classification_name
                 )
                 if classification_layer:
@@ -1343,17 +1353,17 @@ def render_supervised_classification_deeplearning(index):
                     # process_data["training_history_plt"] = training_history_plt
                     process_data["eval_result"] = eval_resul
             if "model_history" in process_data:
-                training_history_plt=plot_training_history(process_data["model_history"])
+                training_history_plt = plot_training_history(process_data["model_history"])
                 st.markdown("#### Model Training Accuracy")
                 st.write("training_history_plt")
                 st.pyplot(training_history_plt)
             if "eval_result" in process_data:
                 st.markdown("#### Model Evaluation")
                 st.write(f"Test Accuracy: {process_data['eval_result']['accuracy']:.3f}")
-                cm=process_data["eval_result"]['confusion_matrix']
+                cm = process_data["eval_result"]["confusion_matrix"]
                 class_names = st.session_state.classes.keys()
                 df_cm = pd.DataFrame(cm, index=class_names, columns=class_names)
-                df_cm.index.name = 'Predicted Label'
+                df_cm.index.name = "Predicted Label"
                 st.markdown("#### Confusion Matrix")
                 st.table(df_cm)
             if "output_fig" in process_data:

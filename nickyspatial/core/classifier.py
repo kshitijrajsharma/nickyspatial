@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 """Implements supervised classification algorithms to classify the segments."""
 
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from collections import Counter, defaultdict
 
-from .layer import Layer
+import numpy as np
+import pandas as pd
+from skimage.measure import regionprops
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
-from collections import defaultdict, Counter
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+
+from .layer import Layer
+
 
 class SupervisedClassifier:
     """Implementation of Supervised Classification algorithm."""
@@ -164,19 +169,7 @@ class SupervisedClassifier:
         return result_layer, accuracy, feature_importances
 
 
-
-"""Implements CNN-based classification for segmented image patches."""
-
-import numpy as np
-import geopandas as gpd
-from skimage.measure import regionprops
-from skimage.transform import resize
-import tensorflow as tf
-from tensorflow.keras import layers, models
-from .layer import Layer
-
 class SupervisedClassifierDL:
-# CNNClassifier:
     """Implementation of CNN-based classification for image patches from segments."""
 
     def __init__(self, name=None, classifier_type="Concolution Neural Network (CNN)", classifier_params=None):
@@ -186,22 +179,20 @@ class SupervisedClassifierDL:
         -----------
         name : str, optional
             Name of the classifier.
-        patch_size : tuple
-            Size of image patches (height, width).
         classifier_params : dict
-            Parameters for CNN training (e.g., epochs, batch_size).
+            Parameters for CNN training (e.g., patch_size, epochs, batch_size).
         """
+        print(classifier_params,"classifier_params")
         self.name = name if name else "CNN_Classification"
         self.classifier_type = classifier_type
-        self.classifier_params = classifier_params if classifier_params else {"epochs": 50, "batch_size": 32,"patch_size": (5,5)}
+        self.classifier_params = classifier_params if classifier_params else {"epochs": 50, "batch_size": 32, "patch_size": (5, 5), "early_stopping_patience":5}
         self.model = None
         self.le = LabelEncoder()
 
     def _extract_training_patches(self, image, segments, samples):
-        """
-        Extract fixed-size patches centered on object centroids.
+        """Extract all the possible fixed-size patches from the object
+
         Patches near image edges are padded using reflection.
-        
         :param image: np.ndarray, shape (H, W, C)
         :param segments: segmentation raster (2D array of integer labels)
         :param samples: dict mapping class names to list of segment IDs
@@ -211,60 +202,57 @@ class SupervisedClassifierDL:
         """
         image = np.moveaxis(image, 0, -1)
         patches = []
-        labels=[]
-        patch_size=self.classifier_params['patch_size']
-        
+        labels = []
+        patch_size = self.classifier_params["patch_size"] if "patch_size" in self.classifier_params.keys() else (5,5)
+
         # Extract region properties
         props = regionprops(segments.raster)
         segment_id_to_region = {prop.label: prop for prop in props}
-        
+
         for key in samples.keys():
             segment_ids = samples[key]
             for seg_id in segment_ids:
-                # print("segment_id", seg_id)
-                incount=0
-                outcount=0
+                incount = 0
+                outcount = 0
                 region = segment_id_to_region.get(seg_id)
                 if region is None:
                     print(f"Segment id {seg_id} not found, skipping.")
                     continue
-                    
-                bbox=region.bbox #min_row, min_col, max_row, max_col
-                min_row, min_col, max_row, max_col= bbox[0],bbox[1],bbox[2],bbox[3]
 
-                n_row_patches= (max_row-min_row) // patch_size[0]
-                n_col_patches= (max_col-min_col) // patch_size[1]
+                bbox = region.bbox  # min_row, min_col, max_row, max_col
+                min_row, min_col, max_row, max_col = bbox[0], bbox[1], bbox[2], bbox[3]
+
+                n_row_patches = (max_row - min_row) // patch_size[0]
+                n_col_patches = (max_col - min_col) // patch_size[1]
 
                 for i in range(n_row_patches):
                     for j in range(n_col_patches):
                         row_start = min_row + i * patch_size[0]
                         row_end = row_start + patch_size[0]
-                        
+
                         col_start = min_col + j * patch_size[1]
                         col_end = col_start + patch_size[1]
-                        
-                        mask= (segments.raster[row_start:row_end, col_start:col_end] == seg_id)
+
+                        mask = segments.raster[row_start:row_end, col_start:col_end] == seg_id
                         if np.all(mask):
-                            incount+=1
+                            incount += 1
                             patch = image[row_start:row_end, col_start:col_end]
                             patches.append(patch)
                             labels.append(key)
                         else:
-                            outcount+=1
+                            outcount += 1
                 # print("incount", incount)
                 # print("outcount", outcount)
-                
 
         patches = np.array(patches)
-        print(f"Extracted {len(patches)} training patches of shape {patches.shape[1:]}")
+        print(f"** Extracted {len(patches)} training patches of shape {patches.shape[1:]} **")
         return patches, labels
-    
 
-    def _extract_patches_for_prediction(self,image, segments):
-        """
-        Extract fixed-size patches centered on object centroids.
+    def _extract_patches_for_prediction(self, image, segments):
+        """Extract fixed-size patches centered on object centroids.
+
         Patches near image edges are padded using reflection.
-        
+
         :param image: np.ndarray, shape (H, W, C)
         :param segments: segmentation raster (2D array of integer labels)
         :param samples: dict mapping class names to list of segment IDs
@@ -274,93 +262,94 @@ class SupervisedClassifierDL:
         """
         image = np.moveaxis(image, 0, -1)
         patches = []
-        segment_ids=[]
-        patch_size=self.classifier_params['patch_size']
-        
+        segment_ids = []
+        patch_size = self.classifier_params["patch_size"]
+
         # Extract region properties
         props = regionprops(segments.raster)
-        segment_id_to_region = {prop.label: prop for prop in props}
+        # segment_id_to_region = {prop.label: prop for prop in props}
 
         for prop in props:
-            incount=0
-            outcount=0
+            incount = 0
+            outcount = 0
             # print(prop.label)
             # centroid=prop.centroid
             # print(centroid)
-            bbox=prop.bbox #min_row, min_col, max_row, max_col
-            min_row, min_col, max_row, max_col= bbox[0],bbox[1],bbox[2],bbox[3]
+            bbox = prop.bbox  # min_row, min_col, max_row, max_col
+            min_row, min_col, max_row, max_col = bbox[0], bbox[1], bbox[2], bbox[3]
             # print(min_row, min_col, max_row, max_col)
 
-            n_row_patches= (max_row-min_row) // patch_size[0]
-            n_col_patches= (max_col-min_col) // patch_size[1]
+            n_row_patches = (max_row - min_row) // patch_size[0]
+            n_col_patches = (max_col - min_col) // patch_size[1]
 
             for i in range(n_row_patches):
                 for j in range(n_col_patches):
                     row_start = min_row + i * patch_size[0]
                     row_end = row_start + patch_size[0]
-                    
+
                     col_start = min_col + j * patch_size[1]
                     col_end = col_start + patch_size[1]
-                    
-                    mask= (segments.raster[row_start:row_end, col_start:col_end] == prop.label)
+
+                    mask = segments.raster[row_start:row_end, col_start:col_end] == prop.label
                     # print(mask)
                     if np.all(mask):
-                        incount+=1
+                        incount += 1
                         patch = image[row_start:row_end, col_start:col_end]
                         patches.append(patch)
                         # labels.append(key)
                         segment_ids.append(prop.label)
                     else:
-                        outcount+=1
+                        outcount += 1
             # print("incount", incount)
             # print("outcount", outcount)
         patches = np.array(patches)
         # print(f"Extracted {len(patches)} patches of shape {patches.shape[1:]}")
         # return patches, labels
-        return patches,  segment_ids
+        return patches, segment_ids
 
     def _create_cnn_model(self, input_shape, num_classes):
         """Define a CNN model."""
-        model = models.Sequential([
-            layers.Input(shape=input_shape),
-            layers.Conv2D(32, (3,3), activation='relu', padding='same'),
-            layers.MaxPooling2D((2,2)),
-            layers.Conv2D(64, (3,3), activation='relu',padding='same'),
-            layers.MaxPooling2D((2,2)),
-            layers.Flatten(),
-            layers.Dense(64, activation='relu'),
-            layers.Dense(num_classes, activation='softmax')   # softmax for multi-class classification
-        ])
-
-        model.compile(
-            optimizer='adam',
-            loss='sparse_categorical_crossentropy',
-            metrics=['accuracy']
+        model = models.Sequential(
+            [
+                layers.Input(shape=input_shape),
+                layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
+                layers.MaxPooling2D((2, 2)),
+                layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
+                layers.MaxPooling2D((2, 2)),
+                layers.Flatten(),
+                layers.Dense(64, activation="relu"),
+                layers.Dense(num_classes, activation="softmax"),  # softmax for multi-class classification
+            ]
         )
+
+        model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
         # self.model=model
         return model
-    
-    def _train_model(self,patches_train,labels_train,patches_val,labels_val):
+
+    def _train_model(self, patches_train, labels_train, patches_val, labels_val):
+        early_stopping_patience= self.classifier_params["early_stopping_patience"] if "early_stopping_patience" in self.classifier_params.keys() else 5
+
         # Define early stopping callback
         early_stopping = EarlyStopping(
-            monitor='val_loss',    # Can use 'val_accuracy' if preferred
-            patience=5,            # Stop training after 5 epochs of no improvement
+            monitor="val_loss",  # Can use 'val_accuracy' if preferred
+            patience=early_stopping_patience,  # Stop training after 5 epochs of no improvement
             restore_best_weights=True,  # Restore the best weights from the epoch with the lowest validation loss
-            verbose=1              # Print messages when early stopping is triggered
+            verbose=1,  # Print messages when early stopping is triggered
         )
 
-        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-7)
-                
+        reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=early_stopping_patience, min_lr=1e-7)
+
         history = self.model.fit(
-            patches_train, labels_train,
-            epochs=self.classifier_params['epochs'],
-            batch_size=self.classifier_params['batch_size'],
+            patches_train,
+            labels_train,
+            epochs=self.classifier_params["epochs"],
+            batch_size=self.classifier_params["batch_size"],
             validation_data=(patches_val, labels_val),
-            callbacks=[early_stopping,reduce_lr]
+            callbacks=[early_stopping, reduce_lr],
         )
         return history
-  
-    def _prediction(self, patches,segment_ids):
+
+    def _prediction(self, patches, segment_ids):
         predictions = self.model.predict(patches)
         predicted_classes = predictions.argmax(axis=1)
         predicted_labels = self.le.inverse_transform(predicted_classes)
@@ -368,7 +357,7 @@ class SupervisedClassifierDL:
         # Step 1: collect predicted labels per segment
         segment_label_map = defaultdict(list)
 
-        for seg_id, label in zip(segment_ids, predicted_labels):
+        for seg_id, label in zip(segment_ids, predicted_labels, strict=False):
             segment_label_map[seg_id].append(label)
 
         # Step 2: for each unique segment_id, choose the label with highest occurrence
@@ -382,7 +371,7 @@ class SupervisedClassifierDL:
         # print(len(final_segment_ids))
         # print(len(final_labels))
         return final_segment_ids, final_labels
-    
+
     def _evaluate(self, patches_test, labels_test):
         predictions = self.model.predict(patches_test)
         predicted_classes = predictions.argmax(axis=1)
@@ -406,8 +395,8 @@ class SupervisedClassifierDL:
 
         # Classification report
         report = classification_report(labels_test, predicted_classes, target_names=self.le.classes_)
-        
-        return {"accuracy":accuracy,"confusion_matrix":conf_matrix,"report":report}
+
+        return {"accuracy": accuracy, "confusion_matrix": conf_matrix, "report": report}
         # print("Evaluation Results:")
         # print(f"Accuracy: {acc:.4f}")
         # print("Confusion Matrix:")
@@ -449,13 +438,15 @@ class SupervisedClassifierDL:
         labels_encoded = self.le.fit_transform(labels)
         num_classes = len(self.le.classes_)
         # print("Classes:", self.le.classes_)
-        patches = patches.astype('float32') / 255.0
-        
+        patches = patches.astype("float32") / 255.0
+
         patches_temp, patches_test, labels_temp, labels_test = train_test_split(
-            patches, labels_encoded, test_size=0.3, random_state=42)
-        
+            patches, labels_encoded, test_size=0.3, random_state=42
+        )
+
         patches_train, patches_val, labels_train, labels_val = train_test_split(
-            patches_temp, labels_temp, test_size=0.2, random_state=42)
+            patches_temp, labels_temp, test_size=0.2, random_state=42
+        )
 
         # input_shape = (self.patch_size[0], self.patch_size[1], 3)
         input_shape = patches.shape[1:]
@@ -464,25 +455,25 @@ class SupervisedClassifierDL:
         if self.classifier_type == "Convolution Neural Network (CNN)":
             self.model = self._create_cnn_model(input_shape, num_classes)
 
-        history=self._train_model(patches_train,labels_train,patches_val,labels_val)
-        
+        history = self._train_model(patches_train, labels_train, patches_val, labels_val)
+
         # history = self.classifier.fit(patches, labels, **self.classifier_params, validation_split=0.2, verbose=0)
         # accuracy = history.history['val_accuracy'][-1]
 
-        patches_all, segment_ids = self._extract_patches_for_prediction(image=image_data, segments=source_layer )
+        patches_all, segment_ids = self._extract_patches_for_prediction(image=image_data, segments=source_layer)
 
-        eval_result= self._evaluate( patches_test, labels_test)
+        eval_result = self._evaluate(patches_test, labels_test)
         print("Evaluation Results:")
-        print(f"Accuracy: {eval_result["accuracy"]}")
+        print(f"Accuracy: {eval_result['accuracy']}")
         print("Confusion Matrix:")
         print(eval_result["confusion_matrix"])
         print("Classification Report:")
         print(eval_result["report"])
 
-        final_segment_ids, final_labels =self._prediction(patches_all, segment_ids)
+        final_segment_ids, final_labels = self._prediction(patches_all, segment_ids)
 
-        segment_to_label = dict(zip(final_segment_ids, final_labels))
-        layer["classification"]=""
+        segment_to_label = dict(zip(final_segment_ids, final_labels, strict=False))
+        layer["classification"] = ""
         layer["classification"] = layer["segment_id"].map(segment_to_label)
 
         result_layer.objects = layer
