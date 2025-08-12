@@ -361,19 +361,55 @@ class SupervisedClassifierDL:
 
     def _create_cnn_model(self, input_shape, num_classes):
         """Define a CNN model."""
-        model = models.Sequential(
-            [
-                layers.Input(shape=input_shape),
-                layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
-                layers.MaxPooling2D((2, 2)),
-                layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
-                layers.MaxPooling2D((2, 2)),
-                layers.Flatten(),
-                layers.Dense(64, activation="relu"),
-                layers.Dense(num_classes, activation="softmax"),  # softmax for multi-class classification
-            ]
-        )
+        # model = models.Sequential(
+        #     [
+        #         layers.Input(shape=input_shape),
+        #         layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
+        #         layers.MaxPooling2D((2, 2)),
+        #         layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
+        #         layers.MaxPooling2D((2, 2)),
+        #         layers.Flatten(),
+        #         layers.Dense(64, activation="relu"),
+        #         layers.Dense(num_classes, activation="softmax"),  # softmax for multi-class classification
+        #     ]
+        # )
 
+        hidden_layers_default= [
+            {"filters": 32, "kernel_size": 3, "max_pooling": True},
+            {"filters": 32, "kernel_size": 3, "max_pooling": True}
+        ]
+
+        hidden_layers_config = self.classifier_params["hidden_layers_config"] if "hidden_layers_config" in self.classifier_params.keys() else hidden_layers_default
+        use_batch_norm = self.classifier_params["use_batch_norm"] if "use_batch_norm" in self.classifier_params.keys() else True
+        dense_units = self.classifier_params["dense_units"] if "dense_units" in self.classifier_params.keys() else 64
+        model = models.Sequential()
+        model.add(layers.Input(shape=input_shape))
+
+        for i, layer_cfg in enumerate(hidden_layers_config):
+
+            # if i == 0:
+            #     model.add(layers.Conv2D(layer_cfg["filters"], 
+            #                             (layer_cfg["kernel_size"], layer_cfg["kernel_size"]),
+            #                             activation='relu', 
+            #                             padding='same', 
+            #                             input_shape=input_shape))
+            # else:
+
+            model.add(layers.Conv2D(layer_cfg["filters"], 
+                                    (layer_cfg["kernel_size"], layer_cfg["kernel_size"]),
+                                    activation='relu', 
+                                    padding='same'))
+            
+            if use_batch_norm:
+                model.add(layers.BatchNormalization())
+
+            if layer_cfg.get("max_pooling", False):
+                model.add(layers.MaxPooling2D((2, 2)))
+
+        # Flatten and Dense
+        model.add(layers.Flatten())
+        model.add(layers.Dense(dense_units, activation='relu'))
+        model.add(layers.Dense(num_classes, activation='softmax'))
         model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
         return model
 
@@ -593,6 +629,8 @@ class SupervisedClassifierDL:
         if self.classifier_type == "Convolution Neural Network (CNN)":
             self.model = self._create_cnn_model(input_shape, num_classes)
 
+
+
         history = self._train_model(patches_train, labels_train, patches_val, labels_val)
 
         patches_all, segment_ids, invalid_patches_segments_ids = self._extract_patches_for_prediction(image=image_data, segments=source_layer)
@@ -613,3 +651,4 @@ class SupervisedClassifierDL:
             layer_manager.add_layer(result_layer)
 
         return result_layer, history, eval_result, count_dict, invalid_patches_segments_ids
+    
