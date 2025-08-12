@@ -195,13 +195,13 @@ def perform_supervised_classification_dl(layer, image_data, selected_classifier,
             for key in list(st.session_state.classes.keys()):
                 samples[key] = st.session_state.classes[key]["sample_ids"]
             
-            st.write(f"{classifier_params} : classifier_params")
+            # st.write(f"{classifier_params} : classifier_params")
 
             classifier = SupervisedClassifierDL(
                 name="CNN Classification", classifier_type=selected_classifier, classifier_params=classifier_params
             )
 
-            classification_layer, model_history, eval_resul = classifier.execute(
+            classification_layer, model_history, eval_resul,count_dict, invalid_patches_segments_ids = classifier.execute(
                 layer,
                 samples=samples,
                 image_data=image_data,
@@ -211,7 +211,7 @@ def perform_supervised_classification_dl(layer, image_data, selected_classifier,
 
             st.session_state.layers[classification_name] = classification_layer
             update_available_attributes()
-            return classification_layer, model_history, eval_resul
+            return classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids
     except Exception as e:
         st.error(f"Error during supervised classification: {str(e)}")
         return None
@@ -1317,29 +1317,17 @@ def render_supervised_classification_deeplearning(index):
                 with col1d:
                     early_stopping_patience = st.number_input("Early Stopping Patience", min_value=5, max_value=20, value=5, step=5, key=f"early_stopping_{index}")
                 
-            # features_options = (
-            #     st.session_state.layers[seg_layer_name]
-            #     .objects.drop(columns=["segment_id", "classification", "geometry"], errors="ignore")
-            #     .columns
-            # )
-            # features = st.multiselect(
-            #     "Select features ",
-            #     features_options,
-            #     # default=None,
-            #     key=f"classifier_feat_{index}",
-            # )
 
             apply_button = st.button("Execute", key=f"execute_dl_classification_{index}")
             if apply_button:
                 classifier_params = {"patch_size": patch_size, "batch_size": batch_size, "epochs": epochs, "early_stopping_patience": early_stopping_patience}
-                # seg_layer_name = st.session_state.active_segmentation_layer_name
 
                 layer = st.session_state.layers[seg_layer_name]
                 image_data = st.session_state.image_data
                 if classification_name in list(st.session_state.layers.keys()):
                     st.error("Layer name already exists")
                     st.stop()
-                classification_layer, model_history, eval_resul = perform_supervised_classification_dl(
+                classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids = perform_supervised_classification_dl(
                     layer, image_data, selected_classifier, classifier_params, classification_name
                 )
                 if classification_layer:
@@ -1347,15 +1335,25 @@ def render_supervised_classification_deeplearning(index):
                     for key in list(st.session_state.classes.keys()):
                         class_color[key] = st.session_state.classes[key]["color"]
                     fig = plot_classification(classification_layer, class_field="classification", class_color=class_color)
-                    # training_history_plt=plot_training_history(model_history)
                     process_data["model_history"] = model_history
                     process_data["output_fig"] = fig
-                    # process_data["training_history_plt"] = training_history_plt
                     process_data["eval_result"] = eval_resul
+                    process_data["count_dict"] = count_dict
+                    process_data["invalid_patches_segments_ids"] = invalid_patches_segments_ids
+
+            if "invalid_patches_segments_ids" in process_data:
+                if process_data['invalid_patches_segments_ids']:
+                    st.error(f"Could not create image patches for segments: {invalid_patches_segments_ids}")
+            if "count_dict" in process_data:
+                st.markdown("#### **Training Patch Extraction**")
+                counts_df = pd.DataFrame(
+                    list(process_data["count_dict"].items()),
+                    columns=["Class", "Patch Count"]
+                )
+                st.table(counts_df)
             if "model_history" in process_data:
                 training_history_plt = plot_training_history(process_data["model_history"])
                 st.markdown("#### Model Training Accuracy")
-                st.write("training_history_plt")
                 st.pyplot(training_history_plt)
             if "eval_result" in process_data:
                 st.markdown("#### Model Evaluation")
@@ -1364,7 +1362,7 @@ def render_supervised_classification_deeplearning(index):
                 class_names = st.session_state.classes.keys()
                 df_cm = pd.DataFrame(cm, index=class_names, columns=class_names)
                 df_cm.index.name = "Predicted Label"
-                st.markdown("#### Confusion Matrix")
+                st.markdown("##### Confusion Matrix")
                 st.table(df_cm)
             if "output_fig" in process_data:
                 st.pyplot(process_data["output_fig"])
