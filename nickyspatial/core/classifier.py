@@ -12,6 +12,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
 
 from .layer import Layer
 
@@ -21,7 +24,7 @@ class SupervisedClassifier:
 
     # TODO: name vs layer_name
 
-    def __init__(self, name=None, classifier_type="Random Forest", classifier_params=None):
+    def __init__(self, name=None, classifier_type="Random Forests", classifier_params=None):
         """Initialize the segmentation algorithm.
 
         Parameters:
@@ -63,33 +66,56 @@ class SupervisedClassifier:
         return layer
 
     def _train(self, features):
-        """Calculate statistics for segments based on image data.
+        """Train the classifier using the training samples and compute accuracy and feature importances.
 
-        Parameters:
-        -----------
-        layer : Layer
-            Layer containing segments
-        image_data : numpy.ndarray
-            Array with raster data values (bands, height, width)
-        bands : list of str
-            Names of the bands
+        Parameters
+        ----------
+        features : list of str or None
+            List of feature column names to use. If None, all columns except segment_id, geometry, and classification are used.
+
+        Returns:
+        -------
+        classifier : sklearn classifier object
+            The trained classifier.
+        test_accuracy : float
+            Accuracy score on training data.
+        feature_importances : pd.Series or None
+            Feature importances (only for Random Forest), else None.
         """
         self.features = features
         if not self.features:
             self.features = self.training_layer.columns
         self.features = [col for col in self.features if col not in ["segment_id", "classification", "geometry"]]
-        x = self.training_layer[self.features]
 
+        x = self.training_layer[self.features]
         y = self.training_layer["classification"]
 
+        # Random Forest
         if self.classifier_type == "Random Forest":
             self.classifier = RandomForestClassifier(**self.classifier_params)
             self.classifier.fit(x, y)
+            test_accuracy = self.classifier.oob_score_
             feature_importances = pd.Series(self.classifier.feature_importances_, index=self.features) * 100
             feature_importances = feature_importances.sort_values(ascending=False)
 
-        test_accuracy = self.classifier.oob_score_
-        # print("OOB Score:", self.classifier.oob_score_)
+        # Support Vector Machine (SVC)
+        elif self.classifier_type == "SVC":
+            self.classifier = SVC(**self.classifier_params)
+            self.classifier.fit(x, y)
+            predictions = self.classifier.predict(x)
+            test_accuracy = accuracy_score(y, predictions)
+            feature_importances = None  # SVM does not support feature importances
+
+        # K-Nearest Neighbors (KNN)
+        elif self.classifier_type == "KNN":
+            self.classifier = KNeighborsClassifier(**self.classifier_params)
+            self.classifier.fit(x, y)
+            predictions = self.classifier.predict(x)
+            test_accuracy = accuracy_score(y, predictions)
+            feature_importances = None  # KNN does not support feature importances
+
+        else:
+            raise ValueError(f"Unsupported classifier type: {self.classifier_type}")
 
         return self.classifier, test_accuracy, feature_importances
 
