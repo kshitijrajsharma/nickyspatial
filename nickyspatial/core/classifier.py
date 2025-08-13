@@ -14,7 +14,7 @@ from tensorflow.keras import layers, models
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 from .layer import Layer
-from collections import Counter
+
 
 class SupervisedClassifier:
     """Implementation of Supervised Classification algorithm."""
@@ -170,11 +170,10 @@ class SupervisedClassifier:
 
 
 class SupervisedClassifierDL:
-    """Implementation of deep learning based supervised classification"""
+    """Implementation of deep learning based supervised classification."""
 
     def __init__(self, name="CNN_Classification", classifier_type="Concolution Neural Network (CNN)", classifier_params=None):
-        """
-        Initialize a Convolutional Neural Network (CNN) classifier.
+        """Initialize a Convolutional Neural Network (CNN) classifier.
 
         Parameters
         ----------
@@ -183,25 +182,26 @@ class SupervisedClassifierDL:
         classifier_type : str, optional
             Type of classifier. Defaults to "Convolution Neural Network (CNN)".
         classifier_params : dict, optional
-            Dictionary of training parameters for the CNN. 
+            Dictionary of training parameters for the CNN.
             If None, the following defaults are used:
                 - epochs (int): 50
                 - batch_size (int): 32
                 - patch_size (tuple of int): (5, 5)
                 - early_stopping_patience (int): 5
         """
-        
-
         # print(classifier_params,"classifier_params")
         self.name = name
         self.classifier_type = classifier_type
-        self.classifier_params = classifier_params if classifier_params else {"epochs": 50, "batch_size": 32, "patch_size": (5, 5), "early_stopping_patience":5}
+        self.classifier_params = (
+            classifier_params
+            if classifier_params
+            else {"epochs": 50, "batch_size": 32, "patch_size": (5, 5), "early_stopping_patience": 5}
+        )
         self.model = None
         self.le = LabelEncoder()
 
     def _extract_training_patches(self, image, segments, samples):
-        """
-        Extract fixed-size training patches from an image based on segment IDs and labeled samples.
+        """Extract fixed-size training patches from an image based on segment IDs and labeled samples.
 
         This method iterates over the provided labeled segments, extract all the possible image patches
         of the specified patch size.
@@ -219,7 +219,7 @@ class SupervisedClassifierDL:
                 "class_2": [2, 6, 10]
             }.
 
-        Returns
+        Returns:
         -------
         patches : np.ndarray
             Array of extracted patches of shape (N, patch_height, patch_width, C),
@@ -229,17 +229,16 @@ class SupervisedClassifierDL:
         counts_dict : dict
              Dictionary mapping each unique class label to the number of occurrences in `labels`.
 
-        Notes
+        Notes:
         -----
         - Patch size is taken from `self.classifier_params["patch_size"]` if provided;
           otherwise defaults to (5, 5).
         - Only patches where all pixels belong to the same segment ID are included.
         """
-        
         image = np.moveaxis(image, 0, -1)
         patches = []
         labels = []
-        patch_size = self.classifier_params["patch_size"] if "patch_size" in self.classifier_params.keys() else (5,5)
+        patch_size = self.classifier_params["patch_size"] if "patch_size" in self.classifier_params.keys() else (5, 5)
 
         # Extract region properties
         props = regionprops(segments.raster)
@@ -280,19 +279,18 @@ class SupervisedClassifierDL:
         patches = np.array(patches)
         print(f"** Extracted {len(patches)} training patches of shape {patches.shape[1:]} **")
         counts = Counter(labels)
-        counts_dict=dict(counts)
+        counts_dict = dict(counts)
         print("** Class distribution: **")
         for cls, count in counts_dict.items():
             print(f"  - {cls}: {count} patches")
         return patches, labels, counts_dict
 
     def _extract_patches_for_prediction(self, image, segments):
-        """
-        Extract fixed-size patches from an image for prediction.
+        """Extract fixed-size patches from an image for prediction.
 
         This method iterates over each segment in the segmentation raster, identifies
         rectangular regions that match the specified patch size, and extracts those
-        patches where all pixels belong to the same segment. 
+        patches where all pixels belong to the same segment.
 
         Parameters
         ----------
@@ -301,7 +299,7 @@ class SupervisedClassifierDL:
         segments : object
             Segmentation object containing a `raster` attribute (2D array of segment IDs).
 
-        Returns
+        Returns:
         -------
         patches : np.ndarray
             List of extracted patches, each of shape (patch_height, patch_width, Channels).
@@ -310,18 +308,17 @@ class SupervisedClassifierDL:
         invalid_patches_segments_ids : list of int
             List of segment IDs for which no valid patches were found.
 
-        Notes
+        Notes:
         -----
         - Patch size is taken from `self.classifier_params["patch_size"]`.
         - Only patches where all pixels belong to the same segment ID are included.
         - `segment_ids` and `patches` maintain the same ordering so that each patch
         can be mapped back to its original segment.
         """
-       
         image = np.moveaxis(image, 0, -1)
         patches = []
         segment_ids = []
-        invalid_patches_segments_ids=[]
+        invalid_patches_segments_ids = []
         patch_size = self.classifier_params["patch_size"]
 
         # Extract region properties
@@ -352,11 +349,14 @@ class SupervisedClassifierDL:
                         segment_ids.append(prop.label)
                     else:
                         outcount += 1
-            if incount==0:
+            if incount == 0:
                 invalid_patches_segments_ids.append(prop.label)
         patches = np.array(patches)
         if invalid_patches_segments_ids:
-            print(f"Error: Could not create patch for the following segments: {invalid_patches_segments_ids} \n Possible reasons: lare patch_size or small segements")
+            print(
+                f"Error: Could not create patch for the following segments: {invalid_patches_segments_ids}",
+                "\n Possible reasons: lare patch_size or small segements",
+            )
         return patches, segment_ids, invalid_patches_segments_ids
 
     def _create_cnn_model(self, input_shape, num_classes):
@@ -374,32 +374,36 @@ class SupervisedClassifierDL:
         #     ]
         # )
 
-        hidden_layers_default= [
+        hidden_layers_default = [
             {"filters": 32, "kernel_size": 3, "max_pooling": True},
-            {"filters": 32, "kernel_size": 3, "max_pooling": True}
+            {"filters": 32, "kernel_size": 3, "max_pooling": True},
         ]
 
-        hidden_layers_config = self.classifier_params["hidden_layers_config"] if "hidden_layers_config" in self.classifier_params.keys() else hidden_layers_default
+        hidden_layers_config = (
+            self.classifier_params["hidden_layers_config"]
+            if "hidden_layers_config" in self.classifier_params.keys()
+            else hidden_layers_default
+        )
         use_batch_norm = self.classifier_params["use_batch_norm"] if "use_batch_norm" in self.classifier_params.keys() else True
         dense_units = self.classifier_params["dense_units"] if "dense_units" in self.classifier_params.keys() else 64
         model = models.Sequential()
         model.add(layers.Input(shape=input_shape))
 
-        for i, layer_cfg in enumerate(hidden_layers_config):
-
+        for layer_cfg in hidden_layers_config:
             # if i == 0:
-            #     model.add(layers.Conv2D(layer_cfg["filters"], 
+            #     model.add(layers.Conv2D(layer_cfg["filters"],
             #                             (layer_cfg["kernel_size"], layer_cfg["kernel_size"]),
-            #                             activation='relu', 
-            #                             padding='same', 
+            #                             activation='relu',
+            #                             padding='same',
             #                             input_shape=input_shape))
             # else:
 
-            model.add(layers.Conv2D(layer_cfg["filters"], 
-                                    (layer_cfg["kernel_size"], layer_cfg["kernel_size"]),
-                                    activation='relu', 
-                                    padding='same'))
-            
+            model.add(
+                layers.Conv2D(
+                    layer_cfg["filters"], (layer_cfg["kernel_size"], layer_cfg["kernel_size"]), activation="relu", padding="same"
+                )
+            )
+
             if use_batch_norm:
                 model.add(layers.BatchNormalization())
 
@@ -408,17 +412,16 @@ class SupervisedClassifierDL:
 
         # Flatten and Dense
         model.add(layers.Flatten())
-        model.add(layers.Dense(dense_units, activation='relu'))
-        model.add(layers.Dense(num_classes, activation='softmax'))
+        model.add(layers.Dense(dense_units, activation="relu"))
+        model.add(layers.Dense(num_classes, activation="softmax"))
         model.compile(optimizer="adam", loss="sparse_categorical_crossentropy", metrics=["accuracy"])
         return model
 
     def _train_model(self, patches_train, labels_train, patches_val, labels_val):
-        """
-        Train the CNN model using the provided training and validation datasets.
+        """Train the CNN model using the provided training and validation datasets.
 
-        This method fits the CNN model with early stopping and learning rate reduction 
-        callbacks to prevent overfitting and improve convergence. The best model weights 
+        This method fits the CNN model with early stopping and learning rate reduction
+        callbacks to prevent overfitting and improve convergence. The best model weights
         are restored based on the lowest validation loss.
 
         Parameters
@@ -432,26 +435,27 @@ class SupervisedClassifierDL:
         labels_val : np.ndarray
             Validation labels corresponding to `patches_val`.
 
-        Returns
+        Returns:
         -------
         history : tensorflow.python.keras.callbacks.History
-            Keras History object containing training and validation loss/accuracy metrics 
+            Keras History object containing training and validation loss/accuracy metrics
             for each epoch.
 
-        Notes
+        Notes:
         -----
-        - Early stopping patience is taken from `self.classifier_params["early_stopping_patience"]` 
+        - Early stopping patience is taken from `self.classifier_params["early_stopping_patience"]`
           if available; otherwise defaults to 5.
-        - The learning rate is reduced by a factor of 0.5 after `early_stopping_patience` 
+        - The learning rate is reduced by a factor of 0.5 after `early_stopping_patience`
           epochs without improvement, with a minimum learning rate of 1e-7.
         - The method assumes that `self.model` has already been compiled.
         """
-        
-        early_stopping_patience= self.classifier_params["early_stopping_patience"] if "early_stopping_patience" in self.classifier_params.keys() else 5
+        early_stopping_patience = (
+            self.classifier_params["early_stopping_patience"] if "early_stopping_patience" in self.classifier_params.keys() else 5
+        )
 
         # Define early stopping callback
         early_stopping = EarlyStopping(
-            monitor="val_loss",  
+            monitor="val_loss",
             patience=early_stopping_patience,  # Stop training after early_stopping_patience epochs of no improvement
             restore_best_weights=True,  # Restore the best weights from the epoch with the lowest validation loss
             verbose=1,  # Print messages when early stopping is triggered
@@ -470,11 +474,10 @@ class SupervisedClassifierDL:
         return history
 
     def _prediction(self, patches, segment_ids):
-        """
-        Predict class labels for image patches and aggregate results by segment ID.
+        """Predict class labels for image patches and aggregate results by segment ID.
 
-        This method uses the trained CNN model to predict class probabilities for each 
-        patch, determines the most probable class, and then assigns a final label to 
+        This method uses the trained CNN model to predict class probabilities for each
+        patch, determines the most probable class, and then assigns a final label to
         each segment based on the majority vote of its corresponding patches.
 
         Parameters
@@ -484,19 +487,18 @@ class SupervisedClassifierDL:
         segment_ids : list of int
             List of segment IDs corresponding to each patch in `patches`.
 
-        Returns
+        Returns:
         -------
         final_segment_ids : list of int
             Unique segment IDs that received predictions.
         final_labels : list
             Predicted class labels for each segment, determined by majority voting.
 
-        Notes
+        Notes:
         -----
-        - For each segment, the label assigned is the one with the highest occurrence 
+        - For each segment, the label assigned is the one with the highest occurrence
         among its patches.
         """
-        
         predictions = self.model.predict(patches)
         predicted_classes = predictions.argmax(axis=1)
         predicted_labels = self.le.inverse_transform(predicted_classes)
@@ -518,8 +520,7 @@ class SupervisedClassifierDL:
         return final_segment_ids, final_labels
 
     def _evaluate(self, patches_test, labels_test):
-        """
-        Evaluate the trained CNN model on test data.
+        """Evaluate the trained CNN model on test data.
 
         This method predicts class labels for test patches, calculates accuracy,
         confusion matrix, and generates a detailed classification report. Results
@@ -532,7 +533,7 @@ class SupervisedClassifierDL:
         labels_test : np.ndarray
             Test labels corresponding to `patches_test`.
 
-        Returns
+        Returns:
         -------
         results : dict
             Dictionary containing evaluation metrics:
@@ -560,13 +561,12 @@ class SupervisedClassifierDL:
         print("Classification Report:")
         print(report)
         return {"accuracy": accuracy, "confusion_matrix": conf_matrix, "report": report}
-        
-    def execute(self, source_layer, samples, image_data, layer_manager=None, layer_name=None):
-        """
-        Perform CNN-based classification on image segments using labeled training samples.
 
-        This method extracts training patches from the input image based on provided 
-        samples, trains a CNN model, evaluates it on test data, predicts labels for all 
+    def execute(self, source_layer, samples, image_data, layer_manager=None, layer_name=None):
+        """Perform CNN-based classification on image segments using labeled training samples.
+
+        This method extracts training patches from the input image based on provided
+        samples, trains a CNN model, evaluates it on test data, predicts labels for all
         segments, and stores the classification results in a new output layer.
 
         Parameters
@@ -581,11 +581,11 @@ class SupervisedClassifierDL:
             manager object to register the output classification layer.
         layer_name : str, optional
             The name to assign to the resulting classified layer.
-        
-        Returns
+
+        Returns:
         -------
         result_layer : Layer
-            New layer containing the original segments with a "classification" attribute 
+            New layer containing the original segments with a "classification" attribute
             representing predicted class labels.
         history : keras.callbacks.History
             Training history object containing loss and accuracy metrics per epoch.
@@ -597,7 +597,6 @@ class SupervisedClassifierDL:
         invalid_patches_segments_ids : list
             List of segment IDs for which no valid patches could be extracted for prediction.
         """
-
         result_layer = Layer(name=layer_name, parent=source_layer, type="merged")
         result_layer.transform = source_layer.transform
         result_layer.crs = source_layer.crs
@@ -629,14 +628,14 @@ class SupervisedClassifierDL:
         if self.classifier_type == "Convolution Neural Network (CNN)":
             self.model = self._create_cnn_model(input_shape, num_classes)
 
-
-
         history = self._train_model(patches_train, labels_train, patches_val, labels_val)
 
-        patches_all, segment_ids, invalid_patches_segments_ids = self._extract_patches_for_prediction(image=image_data, segments=source_layer)
+        patches_all, segment_ids, invalid_patches_segments_ids = self._extract_patches_for_prediction(
+            image=image_data, segments=source_layer
+        )
 
         eval_result = self._evaluate(patches_test, labels_test)
-        
+
         patches_all = patches_all.astype("float32") / 255.0
         final_segment_ids, final_labels = self._prediction(patches_all, segment_ids)
 
@@ -651,4 +650,3 @@ class SupervisedClassifierDL:
             layer_manager.add_layer(result_layer)
 
         return result_layer, history, eval_result, count_dict, invalid_patches_segments_ids
-    

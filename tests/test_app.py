@@ -11,6 +11,7 @@ import json
 import os
 import shutil
 
+import pandas as pd
 import pytest
 
 from nickyspatial import (
@@ -20,6 +21,7 @@ from nickyspatial import (
     RuleSet,
     SlicSegmentation,
     SupervisedClassifier,
+    SupervisedClassifierDL,
     TouchedByRuleSet,
     attach_area_stats,
     attach_ndvi,
@@ -28,6 +30,7 @@ from nickyspatial import (
     layer_to_vector,
     plot_classification,
     plot_layer,
+    plot_training_history,
     read_raster,
 )
 
@@ -177,7 +180,7 @@ def test_full_workflow(test_raster_path):
     available_layers = manager.get_layer_names()
     assert len(available_layers) >= 3, "Expected at least three layers in manager."
 
-    """Supervised Classification Test Start"""
+    """Supervised Classification (ML) Test Start"""
     # Step 1: Perform segmentation.
     segmenter = SlicSegmentation(scale=20, compactness=1)
     segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Base_Segmentation")
@@ -256,3 +259,59 @@ def test_full_workflow(test_raster_path):
     touched_img_path = os.path.join(output_dir, "8_touched_by.png")
     fig8.savefig(touched_img_path)
     assert os.path.exists(touched_img_path), "Touched_by layer not saved."
+
+    """Supervised Classification (DL) Test Start"""
+    # Step 1: Perform segmentation.
+    segmenter = SlicSegmentation(scale=20, compactness=1)
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Base_Segmentation")
+    assert segmentation_layer is not None, "Segmentation layer was not created."
+
+    # Step 2: define samples and colors
+    samples = {
+        "Water": [102, 384, 659, 1142, 1662, 1710, 2113, 2182, 2481, 1024],
+        "built-up": [467, 1102, 1431, 1984, 1227, 1736, 774, 1065],
+        "vegetation": [832, 1778, 2035, 1417, 1263, 242, 2049, 2397],
+    }
+
+    classes_color = {"Water": "#3437c2", "built-up": "#de1421", "vegetation": "#0f6b2f"}
+    # Step 3: RF Supervised Classification implementation
+    params = {"n_estimators": 100, "oob_score": True, "random_state": 42}
+    params = {
+        "patch_size": (5, 5),
+        "epochs": 60,
+        "batch_size": 32,
+        "early_stopping_patience": 5,
+        "hidden_layers": [
+            {"filters": 32, "kernel_size": 3, "max_pooling": True},
+            {"filters": 64, "kernel_size": 3, "max_pooling": True},
+        ],
+        "use_batch_norm": False,
+        "dense_units": 64,
+    }
+
+    cnn_classification = SupervisedClassifierDL(
+        name="CN Classification", classifier_type="Convolution Neural Network (CNN)", classifier_params=params
+    )
+    cnn_classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids = cnn_classification.execute(
+        source_layer=segmentation_layer,
+        samples=samples,
+        image_data=image_data,
+        layer_manager=manager,
+        layer_name="CNN Classification",
+    )
+
+    fig9 = plot_classification(cnn_classification_layer, class_field="classification", class_color=classes_color)
+    assert cnn_classification_layer is not None, "RF classification layer was not created."
+    cnn_classification_img_path = os.path.join(output_dir, "6_CNN_classification.png")
+    fig9.savefig(cnn_classification_img_path)
+    assert os.path.exists(cnn_classification_img_path), "CNN Classification layer not saved."
+
+    cm = eval_result["confusion_matrix"]
+    df_cm = pd.DataFrame(cm, index=samples.keys(), columns=samples.keys())
+    df_cm.index.name = "Predicted Label"
+
+    # Plotting (training and validation) loss and accuracy
+    mh_classification_img_path = os.path.join(output_dir, "6_model_history.png")
+    fig10 = plot_training_history(model_history)
+    fig10.savefig(mh_classification_img_path)
+    assert os.path.exists(mh_classification_img_path), "Model History not saved."

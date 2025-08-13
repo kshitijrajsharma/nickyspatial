@@ -194,14 +194,14 @@ def perform_supervised_classification_dl(layer, image_data, selected_classifier,
             samples = {}
             for key in list(st.session_state.classes.keys()):
                 samples[key] = st.session_state.classes[key]["sample_ids"]
-            
+
             # st.write(f"{classifier_params} : classifier_params")
 
             classifier = SupervisedClassifierDL(
                 name="CNN Classification", classifier_type=selected_classifier, classifier_params=classifier_params
             )
 
-            classification_layer, model_history, eval_resul,count_dict, invalid_patches_segments_ids = classifier.execute(
+            classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids = classifier.execute(
                 layer,
                 samples=samples,
                 image_data=image_data,
@@ -1024,7 +1024,7 @@ def render_select_samples(index):
 
             # st.markdown("#### Load Example Rule Sets")
 
-            if st.button("Load Training Sample Example", key=f"load_sample_{index}"): 
+            if st.button("Load Training Sample Example", key=f"load_sample_{index}"):
                 st.session_state.classes = {
                     "Water": {"color": "#3437c2", "sample_ids": [102, 384, 659, 1142, 1662, 1710, 2113, 2182, 2481, 1024]},
                     "Builtup": {"color": "#de1421", "sample_ids": [467, 1102, 1431, 1984, 1227, 1736, 774, 1065]},
@@ -1298,10 +1298,10 @@ def render_supervised_classification_deeplearning(index):
                 classification_name = st.text_input(
                     "Layer Name", "Supervised_Classification", key=f"dl_classification_name_{index}"
                 )
-            col1a, col1b, col1c,col1d = st.columns(4)
+            col1a, col1b, col1c, col1d = st.columns(4)
             if selected_classifier == "Convolution Neural Network (CNN)":
                 with col1a:
-                    patch_size_list = [(5, 5), (8, 8), (16, 16)]
+                    patch_size_list = [(5, 5), (8, 8), (16, 16), (32, 32), (64, 64), (128, 128), (256, 256)]
                     patch_size = st.selectbox(
                         "Choose a patch size", options=patch_size_list, index=0, key=f"select_dl_patch_size_{index}"
                     )
@@ -1315,8 +1315,10 @@ def render_supervised_classification_deeplearning(index):
                 with col1c:
                     epochs = st.number_input("Epochs", min_value=10, max_value=1000, value=30, step=20, key=f"epoch_{index}")
                 with col1d:
-                    early_stopping_patience = st.number_input("Early Stopping Patience", min_value=5, max_value=20, value=5, step=5, key=f"early_stopping_{index}")
-            
+                    early_stopping_patience = st.number_input(
+                        "Early Stopping Patience", min_value=5, max_value=20, value=5, step=5, key=f"early_stopping_{index}"
+                    )
+
                 st.write("#### Hidden layer configuration")
                 col2a, col2b, col2c = st.columns(3)
 
@@ -1324,17 +1326,17 @@ def render_supervised_classification_deeplearning(index):
                     num_layers = st.number_input("Number of hidden layers", min_value=1, max_value=10, value=2)
                 with col2b:
                     dense_units = st.number_input(
-                        "Dense Units", min_value=8, max_value=256, value=84, step=16, key=f"dense_units_{index}"
+                        "Dense Units", min_value=8, max_value=256, value=64, step=16, key=f"dense_units_{index}"
                     )
                 with col2c:
                     # use_batch_norm = st.toggle("Use batch normalization", value=False, key=f"batch_norm_{index}")
                     use_batch_norm = st.selectbox(
-                            f"Use batch normalization",
-                            options=[True, False],
-                            index=0,  # default to True
-                            key=f"batch_norm"
-                        )
-                
+                        "Use batch normalization",
+                        options=[True, False],
+                        index=0,  # default to True
+                        key="batch_norm",
+                    )
+
                 # Step 2: Store configuration
                 hidden_layers_config = []
 
@@ -1342,44 +1344,43 @@ def render_supervised_classification_deeplearning(index):
                     # st.write(f"###### Layer {i+1} configuration")
                     col2a, col2b, col2c, col2d = st.columns(4)
                     with col2a:
-                        st.write(f"Layer {i+1}")
+                        st.write(f"Layer {i + 1}")
                     with col2b:
-                        filters = st.number_input(f"Filters", min_value=1, value=32, key=f"filters_{i}")
+                        filters = st.number_input("Filters", min_value=1, value=32, key=f"filters_{i}")
                     with col2c:
-                        kernel_size = st.number_input(f"Kernel size", min_value=3, max_value=64 ,value=3, key=f"kernel_{i}")
+                        kernel_size = st.number_input("Kernel size", min_value=3, max_value=64, value=3, key=f"kernel_{i}")
                     with col2d:
                         # max_pooling = st.checkbox(f"Use Max Pooling (Layer {i+1})", value=True, key=f"pool_{i}")
                         max_pooling = st.selectbox(
-                            f"Use Max Pooling",
+                            "Use Max Pooling",
                             options=[True, False],
                             index=0,  # default to True
-                            key=f"pool_{i}"
+                            key=f"pool_{i}",
                         )
 
-                    hidden_layers_config.append({
-                        "filters": filters,
-                        "kernel_size": kernel_size,
-                        "max_pooling": max_pooling
-                    })
+                    hidden_layers_config.append({"filters": filters, "kernel_size": kernel_size, "max_pooling": max_pooling})
 
             apply_button = st.button("Execute", key=f"execute_dl_classification_{index}")
             if apply_button:
-                classifier_params = {"patch_size": patch_size, 
-                                     "batch_size": batch_size, 
-                                     "epochs": epochs, 
-                                     "early_stopping_patience": early_stopping_patience,
-                                     "use_batch_norm":use_batch_norm,
-                                     "dense_units":dense_units,
-                                     "hidden_layers_config":hidden_layers_config
-                                     }
+                classifier_params = {
+                    "patch_size": patch_size,
+                    "batch_size": batch_size,
+                    "epochs": epochs,
+                    "early_stopping_patience": early_stopping_patience,
+                    "use_batch_norm": use_batch_norm,
+                    "dense_units": dense_units,
+                    "hidden_layers_config": hidden_layers_config,
+                }
 
                 layer = st.session_state.layers[seg_layer_name]
                 image_data = st.session_state.image_data
                 if classification_name in list(st.session_state.layers.keys()):
                     st.error("Layer name already exists")
                     st.stop()
-                classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids = perform_supervised_classification_dl(
-                    layer, image_data, selected_classifier, classifier_params, classification_name
+                classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids = (
+                    perform_supervised_classification_dl(
+                        layer, image_data, selected_classifier, classifier_params, classification_name
+                    )
                 )
                 if classification_layer:
                     class_color = {}
@@ -1393,14 +1394,11 @@ def render_supervised_classification_deeplearning(index):
                     process_data["invalid_patches_segments_ids"] = invalid_patches_segments_ids
 
             if "invalid_patches_segments_ids" in process_data:
-                if process_data['invalid_patches_segments_ids']:
-                    st.error(f"Could not create image patches for segments: {invalid_patches_segments_ids}")
+                if process_data["invalid_patches_segments_ids"] != []:
+                    st.error(f"Could not create image patches for segments: {process_data['invalid_patches_segments_ids']}")
             if "count_dict" in process_data:
                 st.markdown("#### **Training Patch Extraction**")
-                counts_df = pd.DataFrame(
-                    list(process_data["count_dict"].items()),
-                    columns=["Class", "Patch Count"]
-                )
+                counts_df = pd.DataFrame(list(process_data["count_dict"].items()), columns=["Class", "Patch Count"])
                 st.table(counts_df)
             if "model_history" in process_data:
                 training_history_plt = plot_training_history(process_data["model_history"])
