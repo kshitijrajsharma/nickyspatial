@@ -19,7 +19,7 @@ Key features:
 __version__ = "1.0.0"
 __author__ = "Kshitij Raj Sharma"
 
-from .core.classifier import SupervisedClassifier
+from .core.classifier import SupervisedClassifier, SupervisedClassifierDL
 from .core.layer import Layer, LayerManager
 from .core.rules import EnclosedByRuleSet, MergeRuleSet, Rule, RuleSet, TouchedByRuleSet
 from .core.segmentation import SlicSegmentation
@@ -35,7 +35,7 @@ from .stats.spatial import (
 )
 from .stats.spectral import attach_ndvi, attach_spectral_indices
 from .utils.helpers import create_sample_data
-from .viz.charts import plot_histogram, plot_statistics
+from .viz.charts import plot_histogram, plot_statistics, plot_training_history
 from .viz.maps import (
     plot_classification,
     plot_comparison,

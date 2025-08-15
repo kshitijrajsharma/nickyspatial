@@ -33,6 +33,8 @@ dependencies = [
     "ipywidgets>=8.1.7",
     "ipympl>=0.9.7",
     "plotly>=6.0.1",
+    "tensorflow>=2.19.0",
+    "nbformat>=5.10.4",
 ]
 
 [project.urls]

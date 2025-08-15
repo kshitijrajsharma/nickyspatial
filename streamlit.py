@@ -28,6 +28,7 @@ from nickyspatial import (
     RuleSet,
     SlicSegmentation,
     SupervisedClassifier,
+    SupervisedClassifierDL,
     TouchedByRuleSet,
     attach_area_stats,
     attach_ndvi,
@@ -37,6 +38,7 @@ from nickyspatial import (
     layer_to_vector,
     plot_classification,
     plot_layer,
+    plot_training_history,
     read_raster,
 )
 
@@ -180,6 +182,36 @@ def perform_supervised_classification(layer, selected_classifier, classifier_par
             st.session_state.layers[classification_name] = classification_layer
             update_available_attributes()
             return classification_layer, accuracy, feature_importances
+    except Exception as e:
+        st.error(f"Error during supervised classification: {str(e)}")
+        return None
+
+
+def perform_supervised_classification_dl(layer, image_data, selected_classifier, classifier_params, classification_name):
+    """Perform segmentation on the image data."""
+    try:
+        with st.spinner("Performing supervised classification..."):
+            samples = {}
+            for key in list(st.session_state.classes.keys()):
+                samples[key] = st.session_state.classes[key]["sample_ids"]
+
+            # st.write(f"{classifier_params} : classifier_params")
+
+            classifier = SupervisedClassifierDL(
+                name="CNN Classification", classifier_type=selected_classifier, classifier_params=classifier_params
+            )
+
+            classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids = classifier.execute(
+                layer,
+                samples=samples,
+                image_data=image_data,
+                layer_manager=st.session_state.manager,
+                layer_name=classification_name,
+            )
+
+            st.session_state.layers[classification_name] = classification_layer
+            update_available_attributes()
+            return classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids
     except Exception as e:
         st.error(f"Error during supervised classification: {str(e)}")
         return None
@@ -840,7 +872,10 @@ def render_touched_by_class(index):
                 class_value_b_index = 0
 
             enclosing_class_value = st.selectbox(
-                "Select enclosing class", options=value_option_list, index=class_value_b_index, key=f"enclosing_class_value_{index}"
+                "Select touched_by class",
+                options=value_option_list,
+                index=class_value_b_index,
+                key=f"enclosing_class_value_{index}",
             )
             process_data["params"]["enclosing_class_value"] = enclosing_class_value
         with colc:
@@ -1114,7 +1149,17 @@ def render_select_samples(index):
             # Create the map
             center_lat = (top_left_latlon[1] + bottom_right_latlon[1]) / 2
             center_lon = (top_left_latlon[0] + bottom_right_latlon[0]) / 2
+
+            # Initialize map center and zoom in session_state
+            # if "map_center" not in st.session_state:
+            #     st.session_state.map_center = [center_lat, center_lon]
+
+            # if "map_zoom" not in st.session_state:
+            #     st.session_state.map_zoom = 15
+
+            # fmap = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom)
             fmap = folium.Map(location=[center_lat, center_lon], zoom_start=15)
+
             ImageOverlay(
                 name="Colored Segments", image=tmp_path, bounds=bounds, opacity=0.8, interactive=True, cross_origin=False
             ).add_to(fmap)
@@ -1124,6 +1169,10 @@ def render_select_samples(index):
 
             # Display the map and handle click events
             click_info = st_folium(fmap, height=600, width=1000, key=f"map_folium_{index}")
+
+            # if "center" in click_info and "zoom" in click_info:
+            #     st.session_state.map_center = [click_info["center"]["lat"], click_info["center"]["lng"]]
+            #     st.session_state.map_zoom = click_info["zoom"]
 
             if show_boundaries:
                 # Process click events
@@ -1142,11 +1191,11 @@ def render_select_samples(index):
                                 break
                         if found and seg_id in st.session_state.classes[selected_class]["sample_ids"]:
                             st.session_state.classes[selected_class]["sample_ids"].remove(seg_id)
-                            st.success(f"Segment ID: {seg_id} at ({col}, {row}) removed from {selected_class}.")
+                            # st.success(f"Segment ID: {seg_id} at ({col}, {row}) removed from {selected_class}.")
                         elif not found and seg_id not in st.session_state.classes[selected_class]["sample_ids"]:
                             st.session_state.classes[selected_class]["sample_ids"].append(seg_id)
-                            st.success(f"Segment ID: {seg_id} at ({col}, {row}) added to {selected_class}.")
-                        st.write(st.session_state.classes)
+                            # st.success(f"Segment ID: {seg_id} at ({col}, {row}) added to {selected_class}.")
+                        # st.write(st.session_state.classes)
                         st.rerun()
     except Exception as e:
         st.error(f"error: {str(e)}")
@@ -1158,9 +1207,7 @@ def render_supervised_classification(index):
         process_data = st.session_state.processes[index]
         if "params" not in process_data:
             process_data["params"] = {}
-
         st.markdown("### Configure Training Classifier")
-
         if "classes" in st.session_state and st.session_state.classes:
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -1191,7 +1238,6 @@ def render_supervised_classification(index):
                     random_state = st.number_input(
                         "Random Seed", min_value=0, max_value=2**32 - 1, value=42, step=1, key=f"no_of_seed_{index}"
                     )
-
             features_options = (
                 st.session_state.layers[seg_layer_name]
                 .objects.drop(columns=["segment_id", "classification", "geometry"], errors="ignore")
@@ -1203,36 +1249,29 @@ def render_supervised_classification(index):
                 # default=None,
                 key=f"classifier_feat_{index}",
             )
-
             apply_button = st.button("Execute", key=f"execute_classification_{index}")
             if apply_button:
                 classifier_params = {"n_estimators": n_estimators, "oob_score": bool(oob_score), "random_state": random_state}
                 # seg_layer_name = st.session_state.active_segmentation_layer_name
-
                 layer = st.session_state.layers[seg_layer_name]
                 if classification_name in list(st.session_state.layers.keys()):
                     st.error("Layer name already exists")
                     st.stop()
-
                 classification_layer, accuracy, feature_importances = perform_supervised_classification(
                     layer, selected_classifier, classifier_params, classification_name, features
                 )
-
                 if classification_layer:
                     class_color = {}
                     for key in list(st.session_state.classes.keys()):
                         class_color[key] = st.session_state.classes[key]["color"]
-
                     fig = plot_classification(classification_layer, class_field="classification", class_color=class_color)
                     process_data["output_fig"] = fig
                     process_data["accuracy"] = accuracy
                     process_data["feature_importances"] = feature_importances
-
                     # process_data["layer_type"] = "classification"
                     # st.session_state.classification_fig = fig  # Store the figure in session state
             if "accuracy" in process_data:
                 st.write(f"OOB Score: {process_data['accuracy']}")
-
             if "output_fig" in process_data:
                 st.pyplot(process_data["output_fig"])
             if "feature_importances" in process_data:
@@ -1244,7 +1283,155 @@ def render_supervised_classification(index):
                 ax.set_ylabel("Importance (%)")
                 plt.tight_layout()
                 st.pyplot(fig)
+        else:
+            st.error("Error: Sample data are not created")
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
 
+
+def render_supervised_classification_deeplearning(index):
+    """Render the classification window for applying deep learning based supervised classification to segmentation layers."""
+    try:
+        process_data = st.session_state.processes[index]
+        if "params" not in process_data:
+            process_data["params"] = {}
+        st.markdown("### Configure Model Training")
+        if "classes" in st.session_state and st.session_state.classes:
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                layer_options = list(st.session_state.layers.keys())
+                seg_layer_name = st.selectbox(
+                    "Select segmentation layer for classification:",
+                    options=layer_options,
+                    index=layer_options.index(st.session_state.active_segmentation_layer_name),
+                    key=f"seg_layer_{index}",
+                )
+            with col2:
+                classifier_list = ["Convolution Neural Network (CNN)"]
+                selected_classifier = st.selectbox(
+                    "Choose a classifier", options=classifier_list, index=0, key=f"select_dl_classifier_{index}"
+                )
+            with col3:
+                classification_name = st.text_input(
+                    "Layer Name", "Supervised_Classification", key=f"dl_classification_name_{index}"
+                )
+            col1a, col1b, col1c, col1d = st.columns(4)
+            if selected_classifier == "Convolution Neural Network (CNN)":
+                with col1a:
+                    patch_size_list = [(5, 5), (8, 8), (16, 16), (32, 32), (64, 64), (128, 128), (256, 256)]
+                    patch_size = st.selectbox(
+                        "Choose a patch size", options=patch_size_list, index=0, key=f"select_dl_patch_size_{index}"
+                    )
+                    # patch_size = st.number_input(
+                    #     "Patch Size", min_value=10, max_value=500, value=20, step=10, key=f"patch_size_{index}"
+                    # )
+                with col1b:
+                    batch_size = st.number_input(
+                        "Batch Size", min_value=8, max_value=256, value=16, step=16, key=f"batch_size_{index}"
+                    )
+                with col1c:
+                    epochs = st.number_input("Epochs", min_value=10, max_value=1000, value=30, step=20, key=f"epoch_{index}")
+                with col1d:
+                    early_stopping_patience = st.number_input(
+                        "Early Stopping Patience", min_value=5, max_value=20, value=5, step=5, key=f"early_stopping_{index}"
+                    )
+
+                st.write("#### Hidden layer configuration")
+                col2a, col2b, col2c = st.columns(3)
+
+                with col2a:
+                    num_layers = st.number_input("Number of hidden layers", min_value=1, max_value=10, value=2)
+                with col2b:
+                    dense_units = st.number_input(
+                        "Dense Units", min_value=8, max_value=256, value=64, step=16, key=f"dense_units_{index}"
+                    )
+                with col2c:
+                    # use_batch_norm = st.toggle("Use batch normalization", value=False, key=f"batch_norm_{index}")
+                    use_batch_norm = st.selectbox(
+                        "Use batch normalization",
+                        options=[True, False],
+                        index=0,  # default to True
+                        key="batch_norm",
+                    )
+
+                # Step 2: Store configuration
+                hidden_layers_config = []
+
+                for i in range(num_layers):
+                    # st.write(f"###### Layer {i+1} configuration")
+                    col2a, col2b, col2c, col2d = st.columns(4)
+                    with col2a:
+                        st.write(f"Layer {i + 1}")
+                    with col2b:
+                        filters = st.number_input("Filters", min_value=1, value=32, key=f"filters_{i}")
+                    with col2c:
+                        kernel_size = st.number_input("Kernel size", min_value=3, max_value=64, value=3, key=f"kernel_{i}")
+                    with col2d:
+                        # max_pooling = st.checkbox(f"Use Max Pooling (Layer {i+1})", value=True, key=f"pool_{i}")
+                        max_pooling = st.selectbox(
+                            "Use Max Pooling",
+                            options=[True, False],
+                            index=0,  # default to True
+                            key=f"pool_{i}",
+                        )
+
+                    hidden_layers_config.append({"filters": filters, "kernel_size": kernel_size, "max_pooling": max_pooling})
+
+            apply_button = st.button("Execute", key=f"execute_dl_classification_{index}")
+            if apply_button:
+                classifier_params = {
+                    "patch_size": patch_size,
+                    "batch_size": batch_size,
+                    "epochs": epochs,
+                    "early_stopping_patience": early_stopping_patience,
+                    "use_batch_norm": use_batch_norm,
+                    "dense_units": dense_units,
+                    "hidden_layers_config": hidden_layers_config,
+                }
+
+                layer = st.session_state.layers[seg_layer_name]
+                image_data = st.session_state.image_data
+                if classification_name in list(st.session_state.layers.keys()):
+                    st.error("Layer name already exists")
+                    st.stop()
+                classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids = (
+                    perform_supervised_classification_dl(
+                        layer, image_data, selected_classifier, classifier_params, classification_name
+                    )
+                )
+                if classification_layer:
+                    class_color = {}
+                    for key in list(st.session_state.classes.keys()):
+                        class_color[key] = st.session_state.classes[key]["color"]
+                    fig = plot_classification(classification_layer, class_field="classification", class_color=class_color)
+                    process_data["model_history"] = model_history
+                    process_data["output_fig"] = fig
+                    process_data["eval_result"] = eval_result
+                    process_data["count_dict"] = count_dict
+                    process_data["invalid_patches_segments_ids"] = invalid_patches_segments_ids
+
+            if "invalid_patches_segments_ids" in process_data:
+                if process_data["invalid_patches_segments_ids"] != []:
+                    st.error(f"Could not create image patches for segments: {process_data['invalid_patches_segments_ids']}")
+            if "count_dict" in process_data:
+                st.markdown("#### **Training Patch Extraction**")
+                counts_df = pd.DataFrame(list(process_data["count_dict"].items()), columns=["Class", "Patch Count"])
+                st.table(counts_df)
+            if "model_history" in process_data:
+                training_history_plt = plot_training_history(process_data["model_history"])
+                st.markdown("#### Model Training Accuracy")
+                st.pyplot(training_history_plt)
+            if "eval_result" in process_data:
+                st.markdown("#### Model Evaluation")
+                st.write(f"Test Accuracy: {process_data['eval_result']['accuracy']:.3f}")
+                cm = process_data["eval_result"]["confusion_matrix"]
+                class_names = st.session_state.classes.keys()
+                df_cm = pd.DataFrame(cm, index=class_names, columns=class_names)
+                df_cm.index.name = "Predicted Label"
+                st.markdown("##### Confusion Matrix")
+                st.table(df_cm)
+            if "output_fig" in process_data:
+                st.pyplot(process_data["output_fig"])
         else:
             st.error("Error: Sample data are not created")
     except Exception as e:
@@ -1476,7 +1663,8 @@ def render_process_tab():
             "Create Rule",
             "Rule-based Classification",
             "Select Sample Data",
-            "Supervised Classification",
+            "Supervised Classification (ML)",
+            "Supervised Classification (DL)",
             "Merge Region",
             "Find Enclosed by Class",
             "Touched_by",
@@ -1521,8 +1709,10 @@ def render_process_tab():
                     render_rule_based_classification(i)
                 elif selected_operation == "Create Rule":
                     render_rule_builder(i)
-                elif selected_operation == "Supervised Classification":
+                elif selected_operation == "Supervised Classification (ML)":
                     render_supervised_classification(i)
+                elif selected_operation == "Supervised Classification (DL)":
+                    render_supervised_classification_deeplearning(i)
                 elif selected_operation == "Merge Region":
                     render_merge_regions(i)
                 elif selected_operation == "Find Enclosed by Class":
@@ -1619,7 +1809,6 @@ def render_layer_manager_tab():
                             st.success(f"Layer '{layer_name}' deleted!")
                             update_available_attributes()
                             st.rerun()
-
             st.markdown("---")
 
 
