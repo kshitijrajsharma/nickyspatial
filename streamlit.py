@@ -201,7 +201,7 @@ def perform_supervised_classification_dl(layer, image_data, selected_classifier,
                 name="CNN Classification", classifier_type=selected_classifier, classifier_params=classifier_params
             )
 
-            classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids = classifier.execute(
+            classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids = classifier.execute(
                 layer,
                 samples=samples,
                 image_data=image_data,
@@ -211,7 +211,7 @@ def perform_supervised_classification_dl(layer, image_data, selected_classifier,
 
             st.session_state.layers[classification_name] = classification_layer
             update_available_attributes()
-            return classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids
+            return classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids
     except Exception as e:
         st.error(f"Error during supervised classification: {str(e)}")
         return None
@@ -872,7 +872,10 @@ def render_touched_by_class(index):
                 class_value_b_index = 0
 
             enclosing_class_value = st.selectbox(
-                "Select enclosing class", options=value_option_list, index=class_value_b_index, key=f"enclosing_class_value_{index}"
+                "Select touched_by class",
+                options=value_option_list,
+                index=class_value_b_index,
+                key=f"enclosing_class_value_{index}",
             )
             process_data["params"]["enclosing_class_value"] = enclosing_class_value
         with colc:
@@ -1146,7 +1149,17 @@ def render_select_samples(index):
             # Create the map
             center_lat = (top_left_latlon[1] + bottom_right_latlon[1]) / 2
             center_lon = (top_left_latlon[0] + bottom_right_latlon[0]) / 2
+
+            # Initialize map center and zoom in session_state
+            # if "map_center" not in st.session_state:
+            #     st.session_state.map_center = [center_lat, center_lon]
+
+            # if "map_zoom" not in st.session_state:
+            #     st.session_state.map_zoom = 15
+
+            # fmap = folium.Map(location=st.session_state.map_center, zoom_start=st.session_state.map_zoom)
             fmap = folium.Map(location=[center_lat, center_lon], zoom_start=15)
+
             ImageOverlay(
                 name="Colored Segments", image=tmp_path, bounds=bounds, opacity=0.8, interactive=True, cross_origin=False
             ).add_to(fmap)
@@ -1156,6 +1169,10 @@ def render_select_samples(index):
 
             # Display the map and handle click events
             click_info = st_folium(fmap, height=600, width=1000, key=f"map_folium_{index}")
+
+            # if "center" in click_info and "zoom" in click_info:
+            #     st.session_state.map_center = [click_info["center"]["lat"], click_info["center"]["lng"]]
+            #     st.session_state.map_zoom = click_info["zoom"]
 
             if show_boundaries:
                 # Process click events
@@ -1174,11 +1191,11 @@ def render_select_samples(index):
                                 break
                         if found and seg_id in st.session_state.classes[selected_class]["sample_ids"]:
                             st.session_state.classes[selected_class]["sample_ids"].remove(seg_id)
-                            st.success(f"Segment ID: {seg_id} at ({col}, {row}) removed from {selected_class}.")
+                            # st.success(f"Segment ID: {seg_id} at ({col}, {row}) removed from {selected_class}.")
                         elif not found and seg_id not in st.session_state.classes[selected_class]["sample_ids"]:
                             st.session_state.classes[selected_class]["sample_ids"].append(seg_id)
-                            st.success(f"Segment ID: {seg_id} at ({col}, {row}) added to {selected_class}.")
-                        st.write(st.session_state.classes)
+                            # st.success(f"Segment ID: {seg_id} at ({col}, {row}) added to {selected_class}.")
+                        # st.write(st.session_state.classes)
                         st.rerun()
     except Exception as e:
         st.error(f"error: {str(e)}")
@@ -1377,7 +1394,7 @@ def render_supervised_classification_deeplearning(index):
                 if classification_name in list(st.session_state.layers.keys()):
                     st.error("Layer name already exists")
                     st.stop()
-                classification_layer, model_history, eval_resul, count_dict, invalid_patches_segments_ids = (
+                classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids = (
                     perform_supervised_classification_dl(
                         layer, image_data, selected_classifier, classifier_params, classification_name
                     )
@@ -1389,7 +1406,7 @@ def render_supervised_classification_deeplearning(index):
                     fig = plot_classification(classification_layer, class_field="classification", class_color=class_color)
                     process_data["model_history"] = model_history
                     process_data["output_fig"] = fig
-                    process_data["eval_result"] = eval_resul
+                    process_data["eval_result"] = eval_result
                     process_data["count_dict"] = count_dict
                     process_data["invalid_patches_segments_ids"] = invalid_patches_segments_ids
 

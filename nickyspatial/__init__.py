@@ -35,12 +35,12 @@ from .stats.spatial import (
 )
 from .stats.spectral import attach_ndvi, attach_spectral_indices
 from .utils.helpers import create_sample_data
-from .viz.charts import plot_histogram, plot_statistics,plot_training_history
+from .viz.charts import plot_histogram, plot_statistics, plot_training_history
 from .viz.maps import (
     plot_classification,
     plot_comparison,
     plot_layer,
     plot_layer_interactive,
     plot_layer_interactive_plotly,
-    plot_sample
+    plot_sample,
 )

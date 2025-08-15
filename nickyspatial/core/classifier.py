@@ -172,7 +172,7 @@ class SupervisedClassifier:
 class SupervisedClassifierDL:
     """Implementation of deep learning based supervised classification."""
 
-    def __init__(self, name="CNN_Classification", classifier_type="Concolution Neural Network (CNN)", classifier_params=None):
+    def __init__(self, name="CNN_Classification", classifier_type="Convolution Neural Network (CNN)", classifier_params=None):
         """Initialize a Convolutional Neural Network (CNN) classifier.
 
         Parameters
@@ -355,7 +355,7 @@ class SupervisedClassifierDL:
         if invalid_patches_segments_ids:
             print(
                 f"Error: Could not create patch for the following segments: {invalid_patches_segments_ids}",
-                "\n Possible reasons: lare patch_size or small segements",
+                "\n Possible reasons: large patch_size or small segements",
             )
         return patches, segment_ids, invalid_patches_segments_ids
 
