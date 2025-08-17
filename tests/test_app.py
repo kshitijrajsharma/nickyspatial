@@ -16,13 +16,16 @@ import pytest
 
 from nickyspatial import (
     EnclosedByRuleSet,
+    FelzenszwalbSegmentation,
     LayerManager,
     MergeRuleSet,
+    RegularGridSegmentation,
     RuleSet,
     SlicSegmentation,
     SupervisedClassifier,
     SupervisedClassifierDL,
     TouchedByRuleSet,
+    WatershedSegmentation,
     attach_area_stats,
     attach_ndvi,
     attach_shape_metrics,
@@ -315,3 +318,106 @@ def test_full_workflow(test_raster_path):
     fig10 = plot_training_history(model_history)
     fig10.savefig(mh_classification_img_path)
     assert os.path.exists(mh_classification_img_path), "Model History not saved."
+
+    ## ----------------------
+    ## Other segmentations
+    ### Felzenszwalb Segmentation TesT
+    felz_segmenter = FelzenszwalbSegmentation(scale=100, sigma=0.5, min_size=50)
+    felz_layer = felz_segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Felzenszwalb_Segmentation")
+    assert felz_layer is not None, "Felzenszwalb segmentation layer was not created."
+    assert felz_layer.metadata["algorithm"] == "Felzenszwalb", "Wrong algorithm in metadata."
+
+    # Test NDVI calculation on Felzenszwalb segments
+    felz_layer.attach_function(
+        attach_ndvi,
+        name="ndvi_stats",
+        nir_column="band_4_mean",
+        red_column="band_3_mean",
+        output_column="NDVI",
+    )
+
+    # Plot and save
+    fig_felz = plot_layer(felz_layer, image_data, rgb_bands=(3, 2, 1), show_boundaries=True)
+    felz_img_path = os.path.join(output_dir, "9_felzenszwalb_segmentation.png")
+    fig_felz.savefig(felz_img_path)
+    assert os.path.exists(felz_img_path), "Felzenszwalb segmentation image not saved."
+
+    # Test classification with Felzenszwalb
+    felz_rules = RuleSet(name="Felz_Land_Cover")
+    felz_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
+    felz_rules.add_rule(name="Other", condition="NDVI <= 0.2")
+    felz_lc_layer = felz_rules.execute(felz_layer, layer_manager=manager, layer_name="Felz_Land_Cover")
+    assert felz_lc_layer is not None, "Felzenszwalb land cover classification failed."
+
+    ### Watershed bro, lets go
+    watershed_segmenter = WatershedSegmentation(n_points=400, preprocessing="sobel", compactness=0.1)
+    watershed_layer = watershed_segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Watershed_Segmentation"
+    )
+    assert watershed_layer is not None, "Watershed segmentation layer was not created."
+    assert watershed_layer.metadata["algorithm"] == "Watershed", "Wrong algorithm in metadata."
+    assert watershed_layer.metadata["preprocessing"] == "sobel", "Wrong preprocessing method in metadata."
+
+    # Test NDVI calculation on Watershed segments
+    watershed_layer.attach_function(
+        attach_ndvi,
+        name="ndvi_stats",
+        nir_column="band_4_mean",
+        red_column="band_3_mean",
+        output_column="NDVI",
+    )
+
+    # Plot and save
+    fig_watershed = plot_layer(watershed_layer, image_data, rgb_bands=(3, 2, 1), show_boundaries=True)
+    watershed_img_path = os.path.join(output_dir, "10_watershed_segmentation.png")
+    fig_watershed.savefig(watershed_img_path)
+    assert os.path.exists(watershed_img_path), "Watershed segmentation image not saved."
+
+    # Test classification with Watershed
+    watershed_rules = RuleSet(name="Watershed_Land_Cover")
+    watershed_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
+    watershed_rules.add_rule(name="Other", condition="NDVI <= 0.2")
+    watershed_lc_layer = watershed_rules.execute(watershed_layer, layer_manager=manager, layer_name="Watershed_Land_Cover")
+    assert watershed_lc_layer is not None, "Watershed land cover classification failed."
+
+    ### Regular grid
+    grid_segmenter = RegularGridSegmentation(grid_size=(15, 15), overlap=2, boundary_handling="pad")
+    grid_layer = grid_segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Grid_Segmentation")
+    assert grid_layer is not None, "Grid segmentation layer was not created."
+    assert grid_layer.metadata["algorithm"] == "RegularGrid", "Wrong algorithm in metadata."
+    assert grid_layer.metadata["grid_size"] == (15, 15), "Wrong grid size in metadata."
+
+    # Test NDVI calculation on Grid segments
+    grid_layer.attach_function(
+        attach_ndvi,
+        name="ndvi_stats",
+        nir_column="band_4_mean",
+        red_column="band_3_mean",
+        output_column="NDVI",
+    )
+
+    # Plot and save
+    fig_grid = plot_layer(grid_layer, image_data, rgb_bands=(3, 2, 1), show_boundaries=True)
+    grid_img_path = os.path.join(output_dir, "11_grid_segmentation.png")
+    fig_grid.savefig(grid_img_path)
+    assert os.path.exists(grid_img_path), "Grid segmentation image not saved."
+
+    # Test classification with Grid
+    grid_rules = RuleSet(name="Grid_Land_Cover")
+    grid_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
+    grid_rules.add_rule(name="Other", condition="NDVI <= 0.2")
+    grid_lc_layer = grid_rules.execute(grid_layer, layer_manager=manager, layer_name="Grid_Land_Cover")
+    assert grid_lc_layer is not None, "Grid land cover classification failed."
+
+    ## Test export
+    felz_vector_path = os.path.join(output_dir, "felzenszwalb_segments.geojson")
+    watershed_vector_path = os.path.join(output_dir, "watershed_segments.geojson")
+    grid_vector_path = os.path.join(output_dir, "grid_segments.geojson")
+
+    layer_to_vector(felz_layer, felz_vector_path)
+    layer_to_vector(watershed_layer, watershed_vector_path)
+    layer_to_vector(grid_layer, grid_vector_path)
+
+    assert os.path.exists(felz_vector_path), "Felzenszwalb GeoJSON not created."
+    assert os.path.exists(watershed_vector_path), "Watershed GeoJSON not created."
+    assert os.path.exists(grid_vector_path), "Grid GeoJSON not created."
