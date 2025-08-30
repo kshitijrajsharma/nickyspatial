@@ -354,7 +354,6 @@ def plot_sample(
     """
     fig, ax = plt.subplots(figsize=figsize)
 
-    # ---- Plot RGB or Grayscale image from array ----
     if image_data is not None:
         num_bands = image_data.shape[0]
         if rgb_bands and num_bands >= 3:
@@ -385,7 +384,6 @@ def plot_sample(
             else:
                 ax.imshow(gray_norm, cmap="gray")
 
-    # ---- Plot classification overlay ----
     gdf = layer.objects.copy()
     if gdf.crs is None:
         raise ValueError("GeoDataFrame has no CRS")

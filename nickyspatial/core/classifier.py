@@ -93,7 +93,6 @@ class SupervisedClassifier:
         x = self.training_layer[self.features]
         y = self.training_layer["classification"]
 
-        # Random Forest
         if self.classifier_type == "Random Forest":
             self.classifier = RandomForestClassifier(**self.classifier_params)
             self.classifier.fit(x, y)
@@ -111,7 +110,6 @@ class SupervisedClassifier:
             test_accuracy = accuracy_score(y, predictions)
             feature_importances = None
 
-        # K-Nearest Neighbors (KNN)
         elif self.classifier_type == "KNN":
             self.classifier = KNeighborsClassifier(**self.classifier_params)
             self.classifier.fit(x, y)
@@ -280,7 +278,7 @@ class SupervisedClassifierDL:
                     print(f"Segment id {seg_id} not found, skipping.")
                     continue
 
-                bbox = region.bbox  # min_row, min_col, max_row, max_col
+                bbox = region.bbox
                 min_row, min_col, max_row, max_col = bbox[0], bbox[1], bbox[2], bbox[3]
 
                 n_row_patches = (max_row - min_row) // patch_size[0]
@@ -505,13 +503,11 @@ class SupervisedClassifierDL:
         predicted_classes = predictions.argmax(axis=1)
         predicted_labels = self.le.inverse_transform(predicted_classes)
 
-        # Step 1: collect predicted labels per segment
         segment_label_map = defaultdict(list)
 
         for seg_id, label in zip(segment_ids, predicted_labels, strict=False):
             segment_label_map[seg_id].append(label)
 
-        # Step 2: for each unique segment_id, choose the label with highest occurrence
         final_segment_ids = []
         final_labels = []
 

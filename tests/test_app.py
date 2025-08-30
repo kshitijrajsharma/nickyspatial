@@ -586,7 +586,7 @@ def test_cnn_training_history(test_raster_path):
     # Minimal CNN parameters for testing
     params = {
         "patch_size": (3, 3),
-        "epochs": 5,  # Reduced for testing
+        "epochs": 5,
         "batch_size": 16,
         "early_stopping_patience": 2,
         "hidden_layers": [{"filters": 16, "kernel_size": 3, "max_pooling": True}],
@@ -698,7 +698,7 @@ def test_complete_workflow_integration(test_raster_path):
     land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
     land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
 
-    rule_based_layer = land_cover_rules.execute(segmentation_layer, layer_manager=manager, layer_name="Rule_Based_Classification")
+    land_cover_rules.execute(segmentation_layer, layer_manager=manager, layer_name="Rule_Based_Classification")
 
     # Step 4: Supervised classification
     samples = {
