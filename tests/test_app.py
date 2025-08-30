@@ -361,9 +361,7 @@ def test_layer_to_raster_functionality(test_raster_path):
     # Read raster and create segmentation
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=30, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="Test_Segmentation"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Test_Segmentation")
 
     # Apply classification rules
     segmentation_layer.attach_function(
@@ -378,9 +376,7 @@ def test_layer_to_raster_functionality(test_raster_path):
     land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
     land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
 
-    land_cover_layer = land_cover_rules.execute(
-        segmentation_layer, layer_manager=manager, layer_name="Land_Cover"
-    )
+    land_cover_layer = land_cover_rules.execute(segmentation_layer, layer_manager=manager, layer_name="Land_Cover")
 
     # Test layer_to_raster export
     raster_output_path = os.path.join(output_dir, "test_classification.tif")
@@ -403,9 +399,7 @@ def test_visualization_functions(test_raster_path):
     # Setup basic data
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=25, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="Viz_Test"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Viz_Test")
 
     # Test basic plot_layer
     fig1 = plot_layer(segmentation_layer, image_data, rgb_bands=(3, 2, 1), show_boundaries=True)
@@ -446,9 +440,7 @@ def test_interactive_plotting(test_raster_path):
     # Setup basic data
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=20, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="Interactive_Test"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Interactive_Test")
 
     # Test plot_layer_interactive (returns widgets, difficult to assert)
     try:
@@ -475,9 +467,7 @@ def test_different_classifiers(test_raster_path):
     # Setup data
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=20, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="Classifier_Test"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Classifier_Test")
 
     samples = {
         "Water": [41, 134, 246, 491],
@@ -487,9 +477,7 @@ def test_different_classifiers(test_raster_path):
 
     # Test SVM classifier
     svm_params = {"kernel": "rbf", "C": 1.0, "random_state": 42}
-    svm_classification = SupervisedClassifier(
-        name="SVM Classification", classifier_type="SVM", classifier_params=svm_params
-    )
+    svm_classification = SupervisedClassifier(name="SVM Classification", classifier_type="SVM", classifier_params=svm_params)
 
     svm_layer, svm_accuracy, svm_features = svm_classification.execute(
         segmentation_layer, samples=samples, layer_manager=manager, layer_name="SVM_Classification"
@@ -500,9 +488,7 @@ def test_different_classifiers(test_raster_path):
 
     # Test KNN classifier
     knn_params = {"n_neighbors": 5}
-    knn_classification = SupervisedClassifier(
-        name="KNN Classification", classifier_type="KNN", classifier_params=knn_params
-    )
+    knn_classification = SupervisedClassifier(name="KNN Classification", classifier_type="KNN", classifier_params=knn_params)
 
     knn_layer, knn_accuracy, knn_features = knn_classification.execute(
         segmentation_layer, samples=samples, layer_manager=manager, layer_name="KNN_Classification"
@@ -521,9 +507,7 @@ def test_hierarchical_rules_workflow(test_raster_path):
     # Setup basic workflow
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=40, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="Hierarchical_Test"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Hierarchical_Test")
 
     # Calculate spectral indices
     segmentation_layer.attach_function(
@@ -550,21 +534,15 @@ def test_hierarchical_rules_workflow(test_raster_path):
     land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
     land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
 
-    land_cover_layer = land_cover_rules.execute(
-        segmentation_layer, layer_manager=manager, layer_name="Land_Cover"
-    )
+    land_cover_layer = land_cover_rules.execute(segmentation_layer, layer_manager=manager, layer_name="Land_Cover")
 
     # Apply hierarchical vegetation rules
     vegetation_rules = RuleSet(name="Vegetation_Types")
-    vegetation_rules.add_rule(
-        name="Healthy_Vegetation", condition="(classification == 'Vegetation') & (NDVI > 0.6)"
-    )
+    vegetation_rules.add_rule(name="Healthy_Vegetation", condition="(classification == 'Vegetation') & (NDVI > 0.6)")
     vegetation_rules.add_rule(
         name="Moderate_Vegetation", condition="(classification == 'Vegetation') & (NDVI <= 0.6) & (NDVI > 0.4)"
     )
-    vegetation_rules.add_rule(
-        name="Sparse_Vegetation", condition="(classification == 'Vegetation') & (NDVI <= 0.4)"
-    )
+    vegetation_rules.add_rule(name="Sparse_Vegetation", condition="(classification == 'Vegetation') & (NDVI <= 0.4)")
 
     vegetation_layer = vegetation_rules.execute(
         land_cover_layer, layer_manager=manager, layer_name="Vegetation_Types", result_field="veg_class"
@@ -602,9 +580,7 @@ def test_cnn_training_history(test_raster_path):
     # Setup CNN classification
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=20, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="CNN_History_Test"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="CNN_History_Test")
 
     samples = {
         "Water": [102, 384, 659, 1142],
@@ -641,7 +617,7 @@ def test_cnn_training_history(test_raster_path):
     # Test plot_training_history
     fig = plot_training_history(model_history)
     assert fig is not None, "plot_training_history failed."
-    
+
     history_plot_path = os.path.join(output_dir, "test_training_history.png")
     fig.savefig(history_plot_path)
     assert os.path.exists(history_plot_path), "Training history plot not saved."
@@ -664,9 +640,7 @@ def test_area_statistics_functionality(test_raster_path):
     # Setup data
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=25, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="Area_Stats_Test"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Area_Stats_Test")
 
     # Apply classification
     samples = {"Class_A": [41, 134], "Class_B": [246, 491], "Class_C": [12, 499]}
@@ -700,9 +674,7 @@ def test_complete_workflow_integration(test_raster_path):
     # Step 1: Basic setup (common to all notebooks)
     image_data, transform, crs = read_raster(test_raster_path)
     segmenter = SlicSegmentation(scale=30, compactness=1)
-    segmentation_layer = segmenter.execute(
-        image_data, transform, crs, layer_manager=manager, layer_name="Integration_Test"
-    )
+    segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Integration_Test")
 
     # Step 2: Calculate all spectral indices
     segmentation_layer.attach_function(
@@ -731,9 +703,7 @@ def test_complete_workflow_integration(test_raster_path):
     land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
     land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
 
-    rule_based_layer = land_cover_rules.execute(
-        segmentation_layer, layer_manager=manager, layer_name="Rule_Based_Classification"
-    )
+    rule_based_layer = land_cover_rules.execute(segmentation_layer, layer_manager=manager, layer_name="Rule_Based_Classification")
 
     # Step 4: Supervised classification
     samples = {
