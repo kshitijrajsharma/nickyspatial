@@ -35,7 +35,6 @@ from nickyspatial import (
     read_raster,
 )
 
-# Try to import CNN functionality and visualization - skip tests if not available
 try:
     import pandas as pd
 
@@ -45,12 +44,10 @@ try:
 except ImportError:
     HAS_CNN = False
 
-# Try to import interactive plotting dependencies
 try:
-    import ipywidgets
-    import plotly.graph_objects as go
+    import importlib.util
 
-    HAS_INTERACTIVE = True
+    HAS_INTERACTIVE = importlib.util.find_spec("ipywidgets") is not None and importlib.util.find_spec("plotly") is not None
 except ImportError:
     HAS_INTERACTIVE = False
 
@@ -444,7 +441,7 @@ def test_interactive_plotting(test_raster_path):
 
     # Test plot_layer_interactive (returns widgets, difficult to assert)
     try:
-        result = plot_layer_interactive(segmentation_layer, image_data, figsize=(8, 6))
+        plot_layer_interactive(segmentation_layer, image_data, figsize=(8, 6))
         # If no exception is raised, consider it successful
         assert True, "plot_layer_interactive executed successfully."
     except Exception as e:
@@ -452,9 +449,7 @@ def test_interactive_plotting(test_raster_path):
 
     # Test plot_layer_interactive_plotly
     try:
-        result = plot_layer_interactive_plotly(
-            segmentation_layer, image_data, rgb_bands=(0, 1, 2), show_boundaries=True, figsize=(400, 300)
-        )
+        plot_layer_interactive_plotly(segmentation_layer, image_data, rgb_bands=(0, 1, 2), show_boundaries=True, figsize=(400, 300))
         assert True, "plot_layer_interactive_plotly executed successfully."
     except Exception as e:
         pytest.skip(f"Plotly interactive plotting failed (expected in headless env): {e}")
