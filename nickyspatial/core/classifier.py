@@ -12,16 +12,20 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import SVC
-from tensorflow.keras import layers, models
-from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+
+try:
+    from tensorflow.keras import layers, models
+    from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
+
+    HAS_TENSORFLOW = True
+except ImportError:
+    HAS_TENSORFLOW = False
 
 from .layer import Layer
 
 
 class SupervisedClassifier:
     """Implementation of Supervised Classification algorithm."""
-
-    # TODO: name vs layer_name
 
     def __init__(self, name=None, classifier_type="Random Forests", classifier_params=None):
         """Initialize the segmentation algorithm.
@@ -93,17 +97,19 @@ class SupervisedClassifier:
         if self.classifier_type == "Random Forest":
             self.classifier = RandomForestClassifier(**self.classifier_params)
             self.classifier.fit(x, y)
-            test_accuracy = self.classifier.oob_score_
+            if hasattr(self.classifier, "oob_score_") and self.classifier.oob_score_:
+                test_accuracy = self.classifier.oob_score_
+            else:
+                test_accuracy = self.classifier.score(x, y)
             feature_importances = pd.Series(self.classifier.feature_importances_, index=self.features) * 100
             feature_importances = feature_importances.sort_values(ascending=False)
 
-        # Support Vector Machine (SVC)
         elif self.classifier_type == "SVC":
             self.classifier = SVC(**self.classifier_params)
             self.classifier.fit(x, y)
             predictions = self.classifier.predict(x)
             test_accuracy = accuracy_score(y, predictions)
-            feature_importances = None  # SVM does not support feature importances
+            feature_importances = None
 
         # K-Nearest Neighbors (KNN)
         elif self.classifier_type == "KNN":
@@ -111,7 +117,7 @@ class SupervisedClassifier:
             self.classifier.fit(x, y)
             predictions = self.classifier.predict(x)
             test_accuracy = accuracy_score(y, predictions)
-            feature_importances = None  # KNN does not support feature importances
+            feature_importances = None
 
         else:
             raise ValueError(f"Unsupported classifier type: {self.classifier_type}")
@@ -134,13 +140,7 @@ class SupervisedClassifier:
 
         """
         layer["classification"] = ""
-        # if not features:
-        #     x = layer.drop(columns=["segment_id", "classification", "geometry"], errors="ignore")
-        # else:
         x = layer[self.features]
-
-        # print(layer.columns)
-        # x = layer.drop(columns=["segment_id", "classification", "geometry"], errors="ignore")
 
         predictions = self.classifier.predict(x)
         layer.loc[layer["classification"] == "", "classification"] = predictions
@@ -171,7 +171,7 @@ class SupervisedClassifier:
             A new Layer object containing the predicted classifications, copied metadata from
             the source layer, and updated attributes.
         """
-        result_layer = Layer(name=layer_name, parent=source_layer, type="merged")
+        result_layer = Layer(name=layer_name, parent=source_layer, layer_type="merged")
         result_layer.transform = source_layer.transform
         result_layer.crs = source_layer.crs
         result_layer.raster = source_layer.raster.copy() if source_layer.raster is not None else None
@@ -214,7 +214,9 @@ class SupervisedClassifierDL:
                 - patch_size (tuple of int): (5, 5)
                 - early_stopping_patience (int): 5
         """
-        # print(classifier_params,"classifier_params")
+        if not HAS_TENSORFLOW:
+            raise ImportError("TensorFlow is required for CNN classification. Install it with: uv add --group cnn tensorflow")
+
         self.name = name
         self.classifier_type = classifier_type
         self.classifier_params = (
@@ -265,7 +267,6 @@ class SupervisedClassifierDL:
         labels = []
         patch_size = self.classifier_params["patch_size"] if "patch_size" in self.classifier_params.keys() else (5, 5)
 
-        # Extract region properties
         props = regionprops(segments.raster)
         segment_id_to_region = {prop.label: prop for prop in props}
 
@@ -346,13 +347,12 @@ class SupervisedClassifierDL:
         invalid_patches_segments_ids = []
         patch_size = self.classifier_params["patch_size"]
 
-        # Extract region properties
         props = regionprops(segments.raster)
 
         for prop in props:
             incount = 0
             outcount = 0
-            bbox = prop.bbox  # min_row, min_col, max_row, max_col
+            bbox = prop.bbox
             min_row, min_col, max_row, max_col = bbox[0], bbox[1], bbox[2], bbox[3]
 
             n_row_patches = (max_row - min_row) // patch_size[0]
@@ -386,19 +386,6 @@ class SupervisedClassifierDL:
 
     def _create_cnn_model(self, input_shape, num_classes):
         """Define a CNN model."""
-        # model = models.Sequential(
-        #     [
-        #         layers.Input(shape=input_shape),
-        #         layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
-        #         layers.MaxPooling2D((2, 2)),
-        #         layers.Conv2D(64, (3, 3), activation="relu", padding="same"),
-        #         layers.MaxPooling2D((2, 2)),
-        #         layers.Flatten(),
-        #         layers.Dense(64, activation="relu"),
-        #         layers.Dense(num_classes, activation="softmax"),  # softmax for multi-class classification
-        #     ]
-        # )
-
         hidden_layers_default = [
             {"filters": 32, "kernel_size": 3, "max_pooling": True},
             {"filters": 32, "kernel_size": 3, "max_pooling": True},
@@ -415,14 +402,6 @@ class SupervisedClassifierDL:
         model.add(layers.Input(shape=input_shape))
 
         for layer_cfg in hidden_layers_config:
-            # if i == 0:
-            #     model.add(layers.Conv2D(layer_cfg["filters"],
-            #                             (layer_cfg["kernel_size"], layer_cfg["kernel_size"]),
-            #                             activation='relu',
-            #                             padding='same',
-            #                             input_shape=input_shape))
-            # else:
-
             model.add(
                 layers.Conv2D(
                     layer_cfg["filters"], (layer_cfg["kernel_size"], layer_cfg["kernel_size"]), activation="relu", padding="same"
@@ -435,7 +414,6 @@ class SupervisedClassifierDL:
             if layer_cfg.get("max_pooling", False):
                 model.add(layers.MaxPooling2D((2, 2)))
 
-        # Flatten and Dense
         model.add(layers.Flatten())
         model.add(layers.Dense(dense_units, activation="relu"))
         model.add(layers.Dense(num_classes, activation="softmax"))
@@ -478,12 +456,11 @@ class SupervisedClassifierDL:
             self.classifier_params["early_stopping_patience"] if "early_stopping_patience" in self.classifier_params.keys() else 5
         )
 
-        # Define early stopping callback
         early_stopping = EarlyStopping(
             monitor="val_loss",
-            patience=early_stopping_patience,  # Stop training after early_stopping_patience epochs of no improvement
-            restore_best_weights=True,  # Restore the best weights from the epoch with the lowest validation loss
-            verbose=1,  # Print messages when early stopping is triggered
+            patience=early_stopping_patience,
+            restore_best_weights=True,
+            verbose=1,
         )
 
         reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=early_stopping_patience, min_lr=1e-7)
@@ -570,13 +547,10 @@ class SupervisedClassifierDL:
         predictions = self.model.predict(patches_test)
         predicted_classes = predictions.argmax(axis=1)
 
-        # Compute accuracy
         accuracy = accuracy_score(labels_test, predicted_classes)
 
-        # Compute confusion matrix
         conf_matrix = confusion_matrix(labels_test, predicted_classes)
 
-        # Classification report
         report = classification_report(labels_test, predicted_classes, target_names=self.le.classes_)
 
         print("Evaluation Results:")
@@ -622,14 +596,13 @@ class SupervisedClassifierDL:
         invalid_patches_segments_ids : list
             List of segment IDs for which no valid patches could be extracted for prediction.
         """
-        result_layer = Layer(name=layer_name, parent=source_layer, type="merged")
+        result_layer = Layer(name=layer_name, parent=source_layer, layer_type="merged")
         result_layer.transform = source_layer.transform
         result_layer.crs = source_layer.crs
 
         layer = source_layer.objects.copy()
         patches, labels, count_dict = self._extract_training_patches(image=image_data, segments=source_layer, samples=samples)
 
-        # Shuffle patches and labels
         indices = np.arange(len(patches))
         np.random.shuffle(indices)
         patches = patches[indices]

@@ -109,7 +109,6 @@ def layer_to_raster(layer, output_path, column=None, nodata=0):
 
         objects = layer.objects
         col_values = objects[column]
-        # Check if values are numeric
         if np.issubdtype(col_values.dtype, np.number):
             shapes = [(geom, float(val)) for geom, val in zip(objects.geometry, col_values, strict=False)]
         else:

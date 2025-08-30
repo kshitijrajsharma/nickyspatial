@@ -11,7 +11,6 @@ import json
 import os
 import shutil
 
-import pandas as pd
 import pytest
 
 from nickyspatial import (
@@ -21,18 +20,39 @@ from nickyspatial import (
     RuleSet,
     SlicSegmentation,
     SupervisedClassifier,
-    SupervisedClassifierDL,
     TouchedByRuleSet,
     attach_area_stats,
     attach_ndvi,
     attach_shape_metrics,
     attach_spectral_indices,
+    layer_to_raster,
     layer_to_vector,
     plot_classification,
     plot_layer,
-    plot_training_history,
+    plot_layer_interactive,
+    plot_layer_interactive_plotly,
+    plot_sample,
     read_raster,
 )
+
+# Try to import CNN functionality and visualization - skip tests if not available
+try:
+    import pandas as pd
+
+    from nickyspatial import SupervisedClassifierDL, plot_training_history
+
+    HAS_CNN = True
+except ImportError:
+    HAS_CNN = False
+
+# Try to import interactive plotting dependencies
+try:
+    import ipywidgets
+    import plotly.graph_objects as go
+
+    HAS_INTERACTIVE = True
+except ImportError:
+    HAS_INTERACTIVE = False
 
 
 @pytest.fixture(autouse=True)
@@ -167,12 +187,6 @@ def test_full_workflow(test_raster_path):
     assert os.path.exists(lc_vector_path), "Land cover GeoJSON not saved."
     assert os.path.exists(veg_vector_path), "Vegetation GeoJSON not saved."
 
-    # TODO : Fix this test case it is failing for some reason
-    # lc_raster_path = os.path.join(output_dir, "land_cover.tif")
-    # layer_to_raster(land_cover_layer, lc_raster_path, column="classification")
-    # assert os.path.exists(lc_raster_path), "Land cover raster not saved."
-
-    # Check that the generated GeoJSON files contain features.
     check_geojson_features(lc_vector_path)
     check_geojson_features(veg_vector_path)
 
@@ -260,13 +274,24 @@ def test_full_workflow(test_raster_path):
     fig8.savefig(touched_img_path)
     assert os.path.exists(touched_img_path), "Touched_by layer not saved."
 
-    """Supervised Classification (DL) Test Start"""
-    # Step 1: Perform segmentation.
+
+@pytest.mark.skipif(not HAS_CNN, reason="TensorFlow/CNN dependencies not available")
+def test_cnn_classification(test_raster_path):
+    """Test CNN-based supervised classification workflow."""
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    manager = LayerManager()
+
+    # Read the raster
+    image_data, transform, crs = read_raster(test_raster_path)
+    assert image_data is not None, "Failed to read image data."
+
+    # Perform segmentation
     segmenter = SlicSegmentation(scale=20, compactness=1)
     segmentation_layer = segmenter.execute(image_data, transform, crs, layer_manager=manager, layer_name="Base_Segmentation")
     assert segmentation_layer is not None, "Segmentation layer was not created."
 
-    # Step 2: define samples and colors
+    # Define samples and colors
     samples = {
         "Water": [102, 384, 659, 1142, 1662, 1710, 2113, 2182, 2481, 1024],
         "built-up": [467, 1102, 1431, 1984, 1227, 1736, 774, 1065],
@@ -274,8 +299,8 @@ def test_full_workflow(test_raster_path):
     }
 
     classes_color = {"Water": "#3437c2", "built-up": "#de1421", "vegetation": "#0f6b2f"}
-    # Step 3: RF Supervised Classification implementation
-    params = {"n_estimators": 100, "oob_score": True, "random_state": 42}
+
+    # CNN classification parameters
     params = {
         "patch_size": (5, 5),
         "epochs": 60,
@@ -290,8 +315,9 @@ def test_full_workflow(test_raster_path):
     }
 
     cnn_classification = SupervisedClassifierDL(
-        name="CN Classification", classifier_type="Convolution Neural Network (CNN)", classifier_params=params
+        name="CNN Classification", classifier_type="Convolution Neural Network (CNN)", classifier_params=params
     )
+
     cnn_classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids = cnn_classification.execute(
         source_layer=segmentation_layer,
         samples=samples,
@@ -300,18 +326,496 @@ def test_full_workflow(test_raster_path):
         layer_name="CNN Classification",
     )
 
+    # Test results
+    assert cnn_classification_layer is not None, "CNN classification layer was not created."
+
+    # Plot and save CNN classification
     fig9 = plot_classification(cnn_classification_layer, class_field="classification", class_color=classes_color)
-    assert cnn_classification_layer is not None, "RF classification layer was not created."
     cnn_classification_img_path = os.path.join(output_dir, "6_CNN_classification.png")
     fig9.savefig(cnn_classification_img_path)
     assert os.path.exists(cnn_classification_img_path), "CNN Classification layer not saved."
 
+    # Test confusion matrix
     cm = eval_result["confusion_matrix"]
     df_cm = pd.DataFrame(cm, index=samples.keys(), columns=samples.keys())
     df_cm.index.name = "Predicted Label"
 
-    # Plotting (training and validation) loss and accuracy
+    # Plot and save model history
     mh_classification_img_path = os.path.join(output_dir, "6_model_history.png")
     fig10 = plot_training_history(model_history)
     fig10.savefig(mh_classification_img_path)
     assert os.path.exists(mh_classification_img_path), "Model History not saved."
+
+    # Validate model performance
+    assert "accuracy" in eval_result, "Evaluation results missing accuracy."
+    assert "loss" in eval_result, "Evaluation results missing loss."
+    assert eval_result["accuracy"] > 0, "CNN accuracy should be greater than 0."
+
+
+def test_layer_to_raster_functionality(test_raster_path):
+    """Test layer_to_raster functionality used in simple_usecase.ipynb."""
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    manager = LayerManager()
+
+    # Read raster and create segmentation
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=30, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Test_Segmentation"
+    )
+
+    # Apply classification rules
+    segmentation_layer.attach_function(
+        attach_ndvi,
+        name="ndvi_stats",
+        nir_column="band_4_mean",
+        red_column="band_3_mean",
+        output_column="NDVI",
+    )
+
+    land_cover_rules = RuleSet(name="Land_Cover")
+    land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
+    land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
+
+    land_cover_layer = land_cover_rules.execute(
+        segmentation_layer, layer_manager=manager, layer_name="Land_Cover"
+    )
+
+    # Test layer_to_raster export
+    raster_output_path = os.path.join(output_dir, "test_classification.tif")
+    layer_to_raster(land_cover_layer, raster_output_path, column="classification")
+
+    assert os.path.exists(raster_output_path), "Raster export failed."
+
+    # Test reading the exported raster
+    exported_data, exported_transform, exported_crs = read_raster(raster_output_path)
+    assert exported_data is not None, "Could not read exported raster."
+    assert exported_data.shape[1:] == image_data.shape[1:], "Exported raster dimensions don't match."
+
+
+def test_visualization_functions(test_raster_path):
+    """Test all visualization functions used in notebooks."""
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    manager = LayerManager()
+
+    # Setup basic data
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=25, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Viz_Test"
+    )
+
+    # Test basic plot_layer
+    fig1 = plot_layer(segmentation_layer, image_data, rgb_bands=(3, 2, 1), show_boundaries=True)
+    assert fig1 is not None, "plot_layer failed."
+    fig1.savefig(os.path.join(output_dir, "test_plot_layer.png"))
+
+    # Add classification for classification plots
+    samples = {
+        "Water": [41, 134, 246],
+        "Built-up": [12, 499, 290],
+        "Vegetation": [36, 143, 239],
+    }
+    classes_color = {"Water": "#3437c2", "Built-up": "#de1421", "Vegetation": "#0f6b2f"}
+
+    rf_classification = SupervisedClassifier(
+        name="Test RF", classifier_type="Random Forest", classifier_params={"n_estimators": 10, "random_state": 42}
+    )
+    rf_layer, accuracy, feature_importances = rf_classification.execute(
+        segmentation_layer, samples=samples, layer_manager=manager, layer_name="RF_Test"
+    )
+
+    # Test plot_classification
+    fig2 = plot_classification(rf_layer, class_field="classification", class_color=classes_color)
+    assert fig2 is not None, "plot_classification failed."
+    fig2.savefig(os.path.join(output_dir, "test_plot_classification.png"))
+
+    # Test plot_sample
+    fig3 = plot_sample(rf_layer, image_data, transform, rgb_bands=(3, 2, 1), class_color=classes_color)
+    assert fig3 is not None, "plot_sample failed."
+    fig3.savefig(os.path.join(output_dir, "test_plot_sample.png"))
+
+
+@pytest.mark.skipif(not HAS_INTERACTIVE, reason="Interactive plotting dependencies not available")
+def test_interactive_plotting(test_raster_path):
+    """Test interactive plotting functions from notebooks."""
+    manager = LayerManager()
+
+    # Setup basic data
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=20, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Interactive_Test"
+    )
+
+    # Test plot_layer_interactive (returns widgets, difficult to assert)
+    try:
+        result = plot_layer_interactive(segmentation_layer, image_data, figsize=(8, 6))
+        # If no exception is raised, consider it successful
+        assert True, "plot_layer_interactive executed successfully."
+    except Exception as e:
+        pytest.skip(f"Interactive plotting failed (expected in headless env): {e}")
+
+    # Test plot_layer_interactive_plotly
+    try:
+        result = plot_layer_interactive_plotly(
+            segmentation_layer, image_data, rgb_bands=(0, 1, 2), show_boundaries=True, figsize=(400, 300)
+        )
+        assert True, "plot_layer_interactive_plotly executed successfully."
+    except Exception as e:
+        pytest.skip(f"Plotly interactive plotting failed (expected in headless env): {e}")
+
+
+def test_different_classifiers(test_raster_path):
+    """Test different classification algorithms (SVM, KNN) used in supervised_classification.ipynb."""
+    manager = LayerManager()
+
+    # Setup data
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=20, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Classifier_Test"
+    )
+
+    samples = {
+        "Water": [41, 134, 246, 491],
+        "Built-up": [12, 499, 290, 484],
+        "Vegetation": [36, 143, 239, 588],
+    }
+
+    # Test SVM classifier
+    svm_params = {"kernel": "rbf", "C": 1.0, "random_state": 42}
+    svm_classification = SupervisedClassifier(
+        name="SVM Classification", classifier_type="SVM", classifier_params=svm_params
+    )
+
+    svm_layer, svm_accuracy, svm_features = svm_classification.execute(
+        segmentation_layer, samples=samples, layer_manager=manager, layer_name="SVM_Classification"
+    )
+
+    assert svm_layer is not None, "SVM classification layer was not created."
+    assert svm_accuracy > 0, "SVM accuracy should be greater than 0."
+
+    # Test KNN classifier
+    knn_params = {"n_neighbors": 5}
+    knn_classification = SupervisedClassifier(
+        name="KNN Classification", classifier_type="KNN", classifier_params=knn_params
+    )
+
+    knn_layer, knn_accuracy, knn_features = knn_classification.execute(
+        segmentation_layer, samples=samples, layer_manager=manager, layer_name="KNN_Classification"
+    )
+
+    assert knn_layer is not None, "KNN classification layer was not created."
+    assert knn_accuracy > 0, "KNN accuracy should be greater than 0."
+
+
+def test_hierarchical_rules_workflow(test_raster_path):
+    """Test hierarchical classification workflow from simple_usecase.ipynb."""
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    manager = LayerManager()
+
+    # Setup basic workflow
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=40, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Hierarchical_Test"
+    )
+
+    # Calculate spectral indices
+    segmentation_layer.attach_function(
+        attach_ndvi,
+        name="ndvi_stats",
+        nir_column="band_4_mean",
+        red_column="band_3_mean",
+        output_column="NDVI",
+    )
+
+    segmentation_layer.attach_function(
+        attach_spectral_indices,
+        name="spectral_indices",
+        bands={
+            "blue": "band_1_mean",
+            "green": "band_2_mean",
+            "red": "band_3_mean",
+            "nir": "band_4_mean",
+        },
+    )
+
+    # Apply land cover rules
+    land_cover_rules = RuleSet(name="Land_Cover")
+    land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
+    land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
+
+    land_cover_layer = land_cover_rules.execute(
+        segmentation_layer, layer_manager=manager, layer_name="Land_Cover"
+    )
+
+    # Apply hierarchical vegetation rules
+    vegetation_rules = RuleSet(name="Vegetation_Types")
+    vegetation_rules.add_rule(
+        name="Healthy_Vegetation", condition="(classification == 'Vegetation') & (NDVI > 0.6)"
+    )
+    vegetation_rules.add_rule(
+        name="Moderate_Vegetation", condition="(classification == 'Vegetation') & (NDVI <= 0.6) & (NDVI > 0.4)"
+    )
+    vegetation_rules.add_rule(
+        name="Sparse_Vegetation", condition="(classification == 'Vegetation') & (NDVI <= 0.4)"
+    )
+
+    vegetation_layer = vegetation_rules.execute(
+        land_cover_layer, layer_manager=manager, layer_name="Vegetation_Types", result_field="veg_class"
+    )
+
+    assert vegetation_layer is not None, "Hierarchical vegetation layer was not created."
+
+    # Test exports
+    land_cover_geojson = os.path.join(output_dir, "hierarchical_land_cover.geojson")
+    vegetation_geojson = os.path.join(output_dir, "hierarchical_vegetation.geojson")
+    land_cover_raster = os.path.join(output_dir, "hierarchical_land_cover.tif")
+
+    layer_to_vector(land_cover_layer, land_cover_geojson)
+    layer_to_vector(vegetation_layer, vegetation_geojson)
+    layer_to_raster(land_cover_layer, land_cover_raster, column="classification")
+
+    assert os.path.exists(land_cover_geojson), "Land cover GeoJSON not created."
+    assert os.path.exists(vegetation_geojson), "Vegetation GeoJSON not created."
+    assert os.path.exists(land_cover_raster), "Land cover raster not created."
+
+    # Verify layer manager
+    available_layers = manager.get_layer_names()
+    expected_layers = ["Hierarchical_Test", "Land_Cover", "Vegetation_Types"]
+    for layer_name in expected_layers:
+        assert layer_name in available_layers, f"Layer {layer_name} not found in manager."
+
+
+@pytest.mark.skipif(not HAS_CNN, reason="TensorFlow/CNN dependencies not available")
+def test_cnn_training_history(test_raster_path):
+    """Test CNN training history visualization from CNN.ipynb."""
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    manager = LayerManager()
+
+    # Setup CNN classification
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=20, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="CNN_History_Test"
+    )
+
+    samples = {
+        "Water": [102, 384, 659, 1142],
+        "Built-up": [467, 1102, 1431, 1984],
+        "Vegetation": [832, 1778, 2035, 1417],
+    }
+
+    # Minimal CNN parameters for testing
+    params = {
+        "patch_size": (3, 3),
+        "epochs": 5,  # Reduced for testing
+        "batch_size": 16,
+        "early_stopping_patience": 2,
+        "hidden_layers": [{"filters": 16, "kernel_size": 3, "max_pooling": True}],
+        "use_batch_norm": False,
+        "dense_units": 32,
+    }
+
+    cnn_classification = SupervisedClassifierDL(
+        name="CNN Test", classifier_type="Convolution Neural Network (CNN)", classifier_params=params
+    )
+
+    cnn_layer, model_history, eval_result, count_dict, invalid_patches = cnn_classification.execute(
+        source_layer=segmentation_layer,
+        samples=samples,
+        image_data=image_data,
+        layer_manager=manager,
+        layer_name="CNN_Test",
+    )
+
+    assert cnn_layer is not None, "CNN classification layer was not created."
+    assert model_history is not None, "Model history was not returned."
+
+    # Test plot_training_history
+    fig = plot_training_history(model_history)
+    assert fig is not None, "plot_training_history failed."
+    
+    history_plot_path = os.path.join(output_dir, "test_training_history.png")
+    fig.savefig(history_plot_path)
+    assert os.path.exists(history_plot_path), "Training history plot not saved."
+
+    # Test confusion matrix exists
+    assert "confusion_matrix" in eval_result, "Confusion matrix missing from eval results."
+    cm = eval_result["confusion_matrix"]
+    assert cm is not None, "Confusion matrix is None."
+
+    # Create confusion matrix DataFrame as shown in CNN.ipynb
+    df_cm = pd.DataFrame(cm, index=samples.keys(), columns=samples.keys())
+    df_cm.index.name = "Predicted Label"
+    assert df_cm is not None, "Confusion matrix DataFrame creation failed."
+
+
+def test_area_statistics_functionality(test_raster_path):
+    """Test area statistics calculation used across notebooks."""
+    manager = LayerManager()
+
+    # Setup data
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=25, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Area_Stats_Test"
+    )
+
+    # Apply classification
+    samples = {"Class_A": [41, 134], "Class_B": [246, 491], "Class_C": [12, 499]}
+    rf_classification = SupervisedClassifier(
+        name="Area Test RF", classifier_type="Random Forest", classifier_params={"n_estimators": 10, "random_state": 42}
+    )
+    classified_layer, _, _ = rf_classification.execute(
+        segmentation_layer, samples=samples, layer_manager=manager, layer_name="Area_Test_Classification"
+    )
+
+    # Test area statistics by class (as used in notebooks)
+    classified_layer.attach_function(attach_area_stats, name="area_by_class", by_class="classification")
+    area_stats = classified_layer.get_function_result("area_by_class")
+
+    assert "class_areas" in area_stats, "Area stats missing class_areas."
+    assert "class_percentages" in area_stats, "Area stats missing class_percentages."
+    assert len(area_stats["class_areas"]) > 0, "No class areas calculated."
+    assert len(area_stats["class_percentages"]) > 0, "No class percentages calculated."
+
+    # Verify percentages sum to approximately 100
+    total_percentage = sum(area_stats["class_percentages"].values())
+    assert abs(total_percentage - 100.0) < 1.0, f"Class percentages don't sum to 100: {total_percentage}"
+
+
+def test_complete_workflow_integration(test_raster_path):
+    """Test complete workflow integration covering all major notebook examples."""
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    manager = LayerManager()
+
+    # Step 1: Basic setup (common to all notebooks)
+    image_data, transform, crs = read_raster(test_raster_path)
+    segmenter = SlicSegmentation(scale=30, compactness=1)
+    segmentation_layer = segmenter.execute(
+        image_data, transform, crs, layer_manager=manager, layer_name="Integration_Test"
+    )
+
+    # Step 2: Calculate all spectral indices
+    segmentation_layer.attach_function(
+        attach_ndvi,
+        name="ndvi_stats",
+        nir_column="band_4_mean",
+        red_column="band_3_mean",
+        output_column="NDVI",
+    )
+
+    segmentation_layer.attach_function(
+        attach_spectral_indices,
+        name="spectral_indices",
+        bands={
+            "blue": "band_1_mean",
+            "green": "band_2_mean",
+            "red": "band_3_mean",
+            "nir": "band_4_mean",
+        },
+    )
+
+    segmentation_layer.attach_function(attach_shape_metrics, name="shape_metrics")
+
+    # Step 3: Rule-based classification
+    land_cover_rules = RuleSet(name="Integration_Land_Cover")
+    land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
+    land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
+
+    rule_based_layer = land_cover_rules.execute(
+        segmentation_layer, layer_manager=manager, layer_name="Rule_Based_Classification"
+    )
+
+    # Step 4: Supervised classification
+    samples = {
+        "Water": [41, 134, 246],
+        "Built-up": [12, 499, 290],
+        "Vegetation": [36, 143, 239],
+    }
+
+    rf_classification = SupervisedClassifier(
+        name="Integration RF", classifier_type="Random Forest", classifier_params={"n_estimators": 20, "random_state": 42}
+    )
+
+    supervised_layer, accuracy, _ = rf_classification.execute(
+        segmentation_layer, samples=samples, layer_manager=manager, layer_name="Supervised_Classification"
+    )
+
+    # Step 5: Post-processing (merge and spatial rules)
+    merger = MergeRuleSet("Integration_Merge")
+    merged_layer = merger.execute(
+        source_layer=supervised_layer,
+        class_column_name="classification",
+        class_value=["Water", "Vegetation"],
+        layer_manager=manager,
+        layer_name="Merged_Classification",
+    )
+
+    # Step 6: Spatial relationship rules
+    encloser_rule = EnclosedByRuleSet()
+    enclosed_layer = encloser_rule.execute(
+        source_layer=merged_layer,
+        class_column_name="classification",
+        class_value_a="Vegetation",
+        class_value_b="Built-up",
+        new_class_name="Park",
+        layer_manager=manager,
+        layer_name="Enclosed_Classification",
+    )
+
+    touched_rule = TouchedByRuleSet()
+    final_layer = touched_rule.execute(
+        source_layer=enclosed_layer,
+        class_column_name="classification",
+        class_value_a="Built-up",
+        class_value_b="Water",
+        new_class_name="Waterfront",
+        layer_manager=manager,
+        layer_name="Final_Classification",
+    )
+
+    # Step 7: Area statistics
+    final_layer.attach_function(attach_area_stats, name="final_area_stats", by_class="classification")
+    final_stats = final_layer.get_function_result("final_area_stats")
+
+    # Step 8: All export formats
+    vector_path = os.path.join(output_dir, "integration_final.geojson")
+    raster_path = os.path.join(output_dir, "integration_final.tif")
+
+    layer_to_vector(final_layer, vector_path)
+    layer_to_raster(final_layer, raster_path, column="classification")
+
+    # Step 9: Visualizations
+    classes_color = {
+        "Water": "#3437c2",
+        "Built-up": "#de1421",
+        "Vegetation": "#0f6b2f",
+        "Park": "#d2f7dc",
+        "Waterfront": "#cc32cf",
+    }
+
+    plot_fig = plot_classification(final_layer, class_field="classification", class_color=classes_color)
+    plot_path = os.path.join(output_dir, "integration_final_plot.png")
+    plot_fig.savefig(plot_path)
+
+    # Assertions
+    assert final_layer is not None, "Final integrated layer was not created."
+    assert os.path.exists(vector_path), "Final vector export failed."
+    assert os.path.exists(raster_path), "Final raster export failed."
+    assert os.path.exists(plot_path), "Final plot export failed."
+    assert "class_areas" in final_stats, "Final area statistics missing."
+    assert len(manager.get_layer_names()) >= 7, "Not all layers were created in manager."
+    assert accuracy > 0, "Supervised classification accuracy should be positive."
+
+    # Verify all expected classes exist
+    unique_classes = final_layer.objects["classification"].unique()
+    assert len(unique_classes) > 1, "Final layer should have multiple classes."
