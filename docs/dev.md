@@ -43,6 +43,13 @@ This will automatically run the following on every commit:
 - ruff: Checks code style and formatting.
 - commitizen: Validates commit messages against the conventional commits specification.
 
+
+When you make changes you can run
+```bash
+uv run pre-commit run --all-files
+```
+To check you pass all the precommit checks.
+
 ## 4. Getting Started
 
 Once you have UV installed, dependencies synced, and pre-commit hooks set, you’re ready for development. A typical workflow might look like:
