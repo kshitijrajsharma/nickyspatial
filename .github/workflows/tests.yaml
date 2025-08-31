@@ -24,6 +24,9 @@ jobs:
       - name: Set up Python
         run: uv python install
 
+      - name: Install dependencies with CNN support
+        run: uv sync --group cnn
+
       - name: Run pre-commit checks
         run: uv run pre-commit run --all-files
 
