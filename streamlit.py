@@ -1079,10 +1079,10 @@ def render_select_samples(index):
                 if color.startswith("#"):
                     color_rgb = [int(color[i : i + 2], 16) for i in (1, 3, 5)]
                 else:
-                    color_rgb = color  # Assume it's already an RGB triplet
+                    color_rgb = color
                 for seg_id in class_data["sample_ids"]:
                     mask = segments == seg_id
-                    for c in range(3):  # RGB channels
+                    for c in range(3):
                         segment_colored_img[:, :, c][mask] = color_rgb[c]
 
             if show_boundaries:
@@ -1307,7 +1307,7 @@ def render_supervised_classification_deeplearning(index):
                     use_batch_norm = st.selectbox(
                         "Use batch normalization",
                         options=[True, False],
-                        index=0,  # default to True
+                        index=0,
                         key="batch_norm",
                     )
 
@@ -1327,7 +1327,7 @@ def render_supervised_classification_deeplearning(index):
                         max_pooling = st.selectbox(
                             "Use Max Pooling",
                             options=[True, False],
-                            index=0,  # default to True
+                            index=0,
                             key=f"pool_{i}",
                         )
 
@@ -1635,7 +1635,7 @@ def render_process_tab():
             st.session_state.processes.append(
                 {
                     "id": len(st.session_state.processes),
-                    "type": "",  # Default process type
+                    "type": "",
                 }
             )
 
@@ -1687,7 +1687,7 @@ def render_process_tab():
         #     st.session_state.processes.append(
         #         {
         #             "id": len(st.session_state.processes),
-        #             "type": "",  # Default process type
+        #             "type": "",
         #         }
         #     )
 
@@ -1741,7 +1741,7 @@ def render_layer_manager_tab():
                                 fig = plot_layer(
                                     layer,
                                     st.session_state.image_data,
-                                    rgb_bands=(2, 1, 0),  # Adjusted for 0-indexed bands
+                                    rgb_bands=(2, 1, 0),
                                     show_boundaries=True,
                                 )
                                 st.pyplot(fig)
