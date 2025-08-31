@@ -61,13 +61,13 @@ Use scikit-learn algorithms for object classification.
 
 ```python
 classifier = ns.SupervisedClassifier(
-    name="RF Classification", 
-    classifier_type="Random Forest", 
+    name="RF Classification",
+    classifier_type="Random Forest",
     classifier_params={"n_estimators": 100}
 )
 classification_layer, accuracy, feature_importances = classifier.execute(
-    layer, 
-    samples=samples, 
+    layer,
+    samples=samples,
     layer_name="classified_layer",
     features=["mean_intensity", "area_units", "ndvi"]
 )
@@ -116,9 +116,9 @@ touched_rules = ns.TouchedByRuleSet()
 merge_rules = ns.MergeRuleSet()
 
 spatial_result = enclosed_rules.execute(
-    layer, 
+    layer,
     class_column_name="classification",
-    class_value_a="building", 
+    class_value_a="building",
     class_value_b="road",
     new_class_name="enclosed_building"
 )
