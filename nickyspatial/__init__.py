@@ -43,4 +43,8 @@ from .viz.maps import (
     plot_layer_interactive,
     plot_layer_interactive_plotly,
     plot_sample,
+    plot_subplots_classification
+)
+from .stats.spectral import (
+    SpectralIndexCalculator, get_available_indices, add_custom_index, attach_spectral_index
 )

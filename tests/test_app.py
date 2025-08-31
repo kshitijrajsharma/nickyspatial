@@ -29,6 +29,7 @@ from nickyspatial import (
     attach_area_stats,
     attach_ndvi,
     attach_shape_metrics,
+    attach_spectral_index,
     attach_spectral_indices,
     layer_to_vector,
     plot_classification,
@@ -421,3 +422,36 @@ def test_full_workflow(test_raster_path):
     assert os.path.exists(felz_vector_path), "Felzenszwalb GeoJSON not created."
     assert os.path.exists(watershed_vector_path), "Watershed GeoJSON not created."
     assert os.path.exists(grid_vector_path), "Grid GeoJSON not created."
+
+    ## test new attach_index function
+    segmentation_layer.attach_function(
+        attach_spectral_index,
+        name="ndwi_calculation",
+        index_name="NDWI",
+        bands={
+            "GREEN": "band_2_mean",
+            "NIR": "band_4_mean",
+        },
+        output_column="NDWI",
+    )
+    assert "NDWI" in segmentation_layer.objects.columns, "NDWI column not added to layer."
+    ndwi_result = segmentation_layer.get_function_result("ndwi_calculation")
+    assert "statistics" in ndwi_result, "NDWI statistics not calculated."
+    assert ndwi_result["index_name"] == "NDWI", "Wrong index name in result."
+
+    # Step 5.2: Calculate custom spectral index using attach_spectral_index.
+    segmentation_layer.attach_function(
+        attach_spectral_index,
+        name="custom_ratio",
+        index_name="NIR_RED_RATIO",
+        formula="NIR / RED",
+        bands={
+            "NIR": "band_4_mean",
+            "RED": "band_3_mean",
+        },
+        output_column="NIR_RED_RATIO",
+    )
+    assert "NIR_RED_RATIO" in segmentation_layer.objects.columns, "Custom ratio column not added to layer."
+    custom_result = segmentation_layer.get_function_result("custom_ratio")
+    assert "error" not in custom_result, f"Custom index calculation failed: {custom_result.get('error')}"
+    assert custom_result["statistics"]["count"] > 0, "No statistics calculated for custom index."
