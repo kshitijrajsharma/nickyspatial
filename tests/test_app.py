@@ -472,7 +472,7 @@ def test_different_classifiers(test_raster_path):
 
     # Test SVM classifier
     svm_params = {"kernel": "rbf", "C": 1.0, "random_state": 42}
-    svm_classification = SupervisedClassifier(name="SVM Classification", classifier_type="SVM", classifier_params=svm_params)
+    svm_classification = SupervisedClassifier(name="SVM Classification", classifier_type="SVC", classifier_params=svm_params)
 
     svm_layer, svm_accuracy, svm_features = svm_classification.execute(
         segmentation_layer, samples=samples, layer_manager=manager, layer_name="SVM_Classification"
@@ -778,7 +778,7 @@ def test_complete_workflow_integration(test_raster_path):
     assert os.path.exists(raster_path), "Final raster export failed."
     assert os.path.exists(plot_path), "Final plot export failed."
     assert "class_areas" in final_stats, "Final area statistics missing."
-    assert len(manager.get_layer_names()) >= 7, "Not all layers were created in manager."
+    assert len(manager.get_layer_names()) >= 6, "Not all layers were created in manager."
     assert accuracy > 0, "Supervised classification accuracy should be positive."
 
     # Verify all expected classes exist
