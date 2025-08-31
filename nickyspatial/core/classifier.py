@@ -399,6 +399,8 @@ class SupervisedClassifierDL:
         model = models.Sequential()
         model.add(layers.Input(shape=input_shape))
 
+        current_height, current_width = input_shape[0], input_shape[1]
+
         for layer_cfg in hidden_layers_config:
             model.add(
                 layers.Conv2D(
@@ -409,8 +411,10 @@ class SupervisedClassifierDL:
             if use_batch_norm:
                 model.add(layers.BatchNormalization())
 
-            if layer_cfg.get("max_pooling", False):
+            if layer_cfg.get("max_pooling", False) and current_height >= 4 and current_width >= 4:
                 model.add(layers.MaxPooling2D((2, 2)))
+                current_height = current_height // 2
+                current_width = current_width // 2
 
         model.add(layers.Flatten())
         model.add(layers.Dense(dense_units, activation="relu"))
@@ -536,12 +540,15 @@ class SupervisedClassifierDL:
         results : dict
             Dictionary containing evaluation metrics:
             - "accuracy" : float, classification accuracy score.
+            - "loss" : float, classification loss score.
             - "confusion_matrix" : np.ndarray, confusion matrix array.
             - "report" : str, text summary of precision, recall, f1-score for each class.
 
         """
         predictions = self.model.predict(patches_test)
         predicted_classes = predictions.argmax(axis=1)
+
+        loss, accuracy_keras = self.model.evaluate(patches_test, labels_test, verbose=0)
 
         accuracy = accuracy_score(labels_test, predicted_classes)
 
@@ -551,11 +558,12 @@ class SupervisedClassifierDL:
 
         print("Evaluation Results:")
         print(f"Accuracy: {accuracy}")
+        print(f"Loss: {loss}")
         print("Confusion Matrix:")
         print(conf_matrix)
         print("Classification Report:")
         print(report)
-        return {"accuracy": accuracy, "confusion_matrix": conf_matrix, "report": report}
+        return {"accuracy": accuracy, "loss": loss, "confusion_matrix": conf_matrix, "report": report}
 
     def execute(self, source_layer, samples, image_data, layer_manager=None, layer_name=None):
         """Perform CNN-based classification on image segments using labeled training samples.
