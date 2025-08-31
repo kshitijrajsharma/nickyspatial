@@ -20,7 +20,7 @@ import warnings
 
 warnings.filterwarnings("ignore", message=".*shapely.geos.*", category=DeprecationWarning)
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __author__ = "Kshitij Raj Sharma"
 
 from .core.classifier import SupervisedClassifier

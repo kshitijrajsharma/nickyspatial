@@ -1,6 +1,6 @@
 [project]
 name = "nickyspatial"
-version = "1.0.0"
+version = "1.1.0"
 description = "An open-source object-based image analysis library for remote sensing."
 readme = "README.md"
 authors = [

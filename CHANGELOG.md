@@ -1,3 +1,20 @@
+## v1.1.0 (2025-08-31)
+
+### Feat
+
+- add cnn in test app and update notebook
+- add dynamic hidden layers confing for CNN both in UI and package
+- add hidden layer configs, use_batch_norms and dense_units params and make the cnn model creation dynamic
+- view Training Patch Extraction counts in CNN model
+- add early_stooping_patience as an input in UI and update notebook
+- implement deep learning based classigication in streamlit UI
+- implement EarlyStopping, ReduceLROnPlateau in CNN model
+- add model evaluation function in CNN model
+- add  function to visualize models history, train and val accuracy and loss
+- added notebook for CNN implemenattion
+- pass and read all params from classifier_params
+- add CNN based classification Class
+
 ## v1.0.0 (2025-08-01)
 
 ### Fix
