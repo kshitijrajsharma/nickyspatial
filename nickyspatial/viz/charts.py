@@ -127,61 +127,6 @@ def plot_statistics(layer, stats_dict, figsize=(12, 8), kind="bar", y_log=False)
     return fig
 
 
-def plot_scatter(layer, x_attribute, y_attribute, color_by=None, figsize=(10, 8)):
-    """Create a scatter plot of two attributes.
-
-    Parameters:
-    -----------
-    layer : Layer
-        Layer containing data
-    x_attribute : str
-        Attribute for x-axis
-    y_attribute : str
-        Attribute for y-axis
-    color_by : str, optional
-        Attribute to color points by
-    figsize : tuple
-        Figure size
-
-    Returns:
-    --------
-    fig : matplotlib.figure.Figure
-        Figure object
-    """
-    if layer.objects is None or x_attribute not in layer.objects.columns or y_attribute not in layer.objects.columns:
-        raise ValueError("Attributes not found in layer objects")
-
-    fig, ax = plt.subplots(figsize=figsize)
-
-    if color_by and color_by in layer.objects.columns:
-        scatter = ax.scatter(
-            layer.objects[x_attribute],
-            layer.objects[y_attribute],
-            c=layer.objects[color_by],
-            cmap="viridis",
-            alpha=0.7,
-            s=50,
-            edgecolor="k",
-        )
-        cbar = plt.colorbar(scatter, ax=ax)
-        cbar.set_label(color_by)
-    else:
-        ax.scatter(
-            layer.objects[x_attribute],
-            layer.objects[y_attribute],
-            alpha=0.7,
-            s=50,
-            edgecolor="k",
-        )
-
-    ax.set_title(f"{y_attribute} vs {x_attribute}")
-    ax.set_xlabel(x_attribute)
-    ax.set_ylabel(y_attribute)
-    ax.grid(alpha=0.3)
-
-    return fig
-
-
 def plot_training_history(history):
     """Plot (training and validation) loss and accuracy curves from a Keras(CNN) training history.
 
@@ -202,17 +147,14 @@ def plot_training_history(history):
     """
     epoches = np.arange(1, len(history.history.get("loss")) + 1)
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, sharex=True, figsize=(15, 7))  # Removed sharey=True
+    fig, (ax1, ax2) = plt.subplots(1, 2, sharex=True, figsize=(15, 7))
 
-    # Extract Loss Values
     train_loss = history.history.get("loss")
     val_loss = history.history.get("val_loss")
 
-    # Extract Accuracy Values (Scaled to Percentage)
     train_acc = [x * 100 for x in history.history.get("accuracy")]
     val_acc = [x * 100 for x in history.history.get("val_accuracy")]
 
-    # --- Plot Training & Validation Loss ---
     ax1.plot(epoches, train_loss, "b", marker="o", label="Training Loss")
     ax1.plot(epoches, val_loss, "r", marker="o", label="Validation Loss")
     ax1.set_title("Training and Validation Loss", fontsize=16)
@@ -221,21 +163,17 @@ def plot_training_history(history):
     ax1.tick_params(axis="x", labelsize=14)
     ax1.tick_params(axis="y", labelsize=14)
 
-    # Dynamically adjust the Y-Axis range for loss
     ax1.set_ylim(min(train_loss + val_loss) * 0.9, max(train_loss + val_loss) * 1.1)
-    ax1.set_yticks(np.linspace(min(train_loss + val_loss), max(train_loss + val_loss), num=5))  # 5 evenly spaced ticks
+    ax1.set_yticks(np.linspace(min(train_loss + val_loss), max(train_loss + val_loss), num=5))
 
-    # --- Plot Training & Validation Accuracy ---
     ax2.plot(epoches, train_acc, "b", marker="o", label="Training Accuracy")
     ax2.plot(epoches, val_acc, "r", marker="o", label="Validation Accuracy")
     ax2.set_title("Training and Validation Accuracy", fontsize=16)
-    ax2.set_ylabel("Accuracy (%)", fontsize=14)  # Accuracy in Percentage
+    ax2.set_ylabel("Accuracy (%)", fontsize=14)
     ax2.legend(fontsize=13)
     ax2.tick_params(axis="x", labelsize=14)
     ax2.tick_params(axis="y", labelsize=14)
 
-    # Dynamically adjust the Y-Axis range for accuracy
     ax2.set_ylim(min(train_acc + val_acc) * 0.9, max(train_acc + val_acc) * 1.1)
-    ax2.set_yticks(np.linspace(min(train_acc + val_acc), max(train_acc + val_acc), num=5))  # 5 evenly spaced ticks
-    # plt.show()
+    ax2.set_yticks(np.linspace(min(train_acc + val_acc), max(train_acc + val_acc), num=5))
     return plt

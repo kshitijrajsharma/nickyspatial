@@ -89,14 +89,6 @@ def run_example(raster_path=None):
     land_cover_rules = RuleSet(name="Land_Cover")
 
     land_cover_rules.add_rule(name="Vegetation", condition="NDVI > 0.2")
-
-    # land_cover_rules.add_rule( ## need to implement logic for &
-    #     name="Water",
-    #     condition="band_4_mean < 0.1 & band_1_mean > band_3_mean & band_1_mean > band_3_mean",
-    # )
-
-    # land_cover_rules.add_rule(name="Urban", condition="NDVI < 0.1 & band_3_mean > 0.3")
-
     land_cover_rules.add_rule(name="Other", condition="NDVI <= 0.2")
 
     land_cover_layer = land_cover_rules.execute(segmentation_layer, layer_manager=manager, layer_name="Land_Cover")
@@ -144,55 +136,10 @@ def run_example(raster_path=None):
     fig4 = plot_classification(vegetation_layer, class_field="veg_class")
     fig4.savefig(os.path.join(output_dir, "4_vegetation_types.png"))
 
-    # print("\nClassifying water bodies by shape and size...")
-
-    # water_rules = RuleSet(name="Water_Bodies")
-
-    # water_rules.add_rule(
-    #     name="Lake",
-    #     condition="classification == 'Water' & area_units > 10000 & compactness > 0.3",
-    # )
-
-    # water_rules.add_rule(
-    #     name="River", condition="classification == 'Water' & shape_index > 2.5"
-    # )
-
-    # water_rules.add_rule(
-    #     name="Pond",
-    #     condition="classification == 'Water' & area_units <= 10000 & area_units > 1000",
-    # )
-
-    # water_rules.add_rule(name="Small_Water", condition="classification == 'Water'")
-
-    # water_layer = water_rules.execute(
-    #     land_cover_layer,
-    #     layer_manager=manager,
-    #     layer_name="Water_Bodies",
-    #     result_field="water_type",
-    # )
-
-    # fig5 = plot_classification(water_layer, class_field="water_type")
-    # fig5.savefig(os.path.join(output_dir, "5_water_bodies.png"))
-
-    # print("\nCalculating statistics for water bodies...")
-
-    # water_counts = water_layer.objects.groupby("water_type").size()
-
-    # water_areas = water_layer.objects.groupby("water_type")["area_units"].sum()
-
-    # print("\nWater body statistics:")
-    # for water_type in water_counts.index:
-    #     if water_type is None:
-    #         continue
-    #     count = water_counts.get(water_type, 0)
-    #     area = water_areas.get(water_type, 0)
-    #     print(f"  {water_type}: {count} features, {area:.2f} sq. units")
-
     print("\nExporting results...")
 
     layer_to_vector(land_cover_layer, os.path.join(output_dir, "land_cover.geojson"))
     layer_to_vector(vegetation_layer, os.path.join(output_dir, "vegetation_types.geojson"))
-    # layer_to_vector(water_layer, os.path.join(output_dir, "water_bodies.geojson"))
 
     layer_to_raster(
         land_cover_layer,
@@ -207,6 +154,4 @@ def run_example(raster_path=None):
 
 
 if __name__ == "__main__":
-    # run_example()
-
     run_example("data/sample.tif")

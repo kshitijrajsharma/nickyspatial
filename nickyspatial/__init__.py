@@ -16,10 +16,18 @@ Key features:
 - Integration with geospatial data formats
 """
 
+import warnings
+
+warnings.filterwarnings("ignore", message=".*shapely.geos.*", category=DeprecationWarning)
+
 __version__ = "1.0.0"
 __author__ = "Kshitij Raj Sharma"
 
-from .core.classifier import SupervisedClassifier, SupervisedClassifierDL
+from .core.classifier import SupervisedClassifier
+try:
+    from .core.classifier import SupervisedClassifierDL
+except ImportError:
+    pass
 from .core.layer import Layer, LayerManager
 from .core.rules import EnclosedByRuleSet, MergeRuleSet, Rule, RuleSet, TouchedByRuleSet
 from .core.segmentation import SlicSegmentation

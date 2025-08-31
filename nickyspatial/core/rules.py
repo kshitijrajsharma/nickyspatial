@@ -18,7 +18,6 @@ from shapely.ops import unary_union
 from .layer import Layer
 
 
-# TODO: What if field have non-numeric content??
 class Rule:
     """A rule defines a condition to classify segments."""
 
@@ -124,7 +123,7 @@ class RuleSet:
         if not layer_name:
             layer_name = f"{source_layer.name}_{self.name}"
 
-        result_layer = Layer(name=layer_name, parent=source_layer, type="classification")
+        result_layer = Layer(name=layer_name, parent=source_layer, layer_type="classification")
         result_layer.transform = source_layer.transform
         result_layer.crs = source_layer.crs
         result_layer.raster = source_layer.raster.copy() if source_layer.raster is not None else None
@@ -155,8 +154,6 @@ class RuleSet:
                     or f"{result_field} !=" in rule.condition
                     or f"{result_field}!=" in rule.condition
                 ):
-                    ## TODO : better way to handle this , because & searching in string is not a good idea,
-                    # this might produce bug for complex rules
                     eval_condition = rule.condition.replace("&", " and ").replace("|", " or ")
 
                     mask = result_layer.objects.apply(
@@ -281,14 +278,13 @@ class MergeRuleSet(CommonBase):
         if not layer_name:
             layer_name = f"{source_layer.name}_{self.name}"
 
-        result_layer = Layer(name=layer_name, parent=source_layer, type="merged")
+        result_layer = Layer(name=layer_name, parent=source_layer, layer_type="merged")
         result_layer.transform = source_layer.transform
         result_layer.crs = source_layer.crs
         result_layer.raster = source_layer.raster.copy() if source_layer.raster is not None else None
 
         df = source_layer.objects.copy()
 
-        # Handle single or multiple class fields
         if isinstance(class_value, str):
             class_values = [class_value]
         else:
@@ -388,7 +384,7 @@ class EnclosedByRuleSet(CommonBase):
         if not layer_name:
             layer_name = f"{source_layer.name}_{self.name}"
 
-        result_layer = Layer(name=layer_name, parent=source_layer, type="merged")
+        result_layer = Layer(name=layer_name, parent=source_layer, layer_type="merged")
         result_layer.transform = source_layer.transform
         result_layer.crs = source_layer.crs
         result_layer.raster = source_layer.raster.copy() if source_layer.raster is not None else None
@@ -472,7 +468,7 @@ class TouchedByRuleSet(CommonBase):
         if not layer_name:
             layer_name = f"{source_layer.name}_{self.name}"
 
-        result_layer = Layer(name=layer_name, parent=source_layer, type="merged")
+        result_layer = Layer(name=layer_name, parent=source_layer, layer_type="merged")
         result_layer.transform = source_layer.transform
         result_layer.crs = source_layer.crs
         result_layer.raster = source_layer.raster.copy() if source_layer.raster is not None else None

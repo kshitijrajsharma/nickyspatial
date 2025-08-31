@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Implements segmentation algorithms to partition images into meaningful region objects.
-
-The functions here might apply clustering or region-growing techniques, aiding object-based remote sensing analysis.
-This module includes the SlicSegmentation class, which implements a bottom-up region-growing algorithm
-"""
+"""Implements segmentation algorithms to partition images into meaningful region objects."""
 
 import warnings
 
@@ -17,69 +13,28 @@ from .layer import Layer
 
 
 class SlicSegmentation:
-    """Implementation of Multiresolution segmentation algorithm.
-
-    This algorithm segments an image using a bottom-up region-growing approach
-    that optimizes the homogeneity of pixel values within segments while
-    considering shape compactness.
-    """
+    """Implementation of Multiresolution segmentation algorithm."""
 
     def __init__(self, scale=15, compactness=0.6):
-        """Initialize the segmentation algorithm.
-
-        Parameters:
-        -----------
-        scale : float
-            Scale parameter that influences the size of the segments.
-            Higher values create larger segments.
-        shape : float, range [0, 1]
-            Weight of shape criterion vs. color criterion.
-            Higher values give more weight to shape.
-        compactness : float, range [0, 1]
-            Weight of compactness criterion vs. smoothness criterion.
-            Higher values create more compact segments.
-        """
+        """Initialize SLIC with scale (segment size) and compactness (shape regularity)."""
         self.scale = scale
         self.compactness = compactness
 
     def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
-        """Perform segmentation and create a layer with the results.
-
-        Parameters:
-        -----------
-        image_data : numpy.ndarray
-            Array with raster data values (bands, height, width)
-        transform : affine.Affine
-            Affine transformation for the raster
-        crs : rasterio.crs.CRS
-            Coordinate reference system
-        layer_manager : LayerManager, optional
-            Layer manager to add the result layer to
-        layer_name : str, optional
-            Name for the result layer
-
-        Returns:
-        --------
-        layer : Layer
-            Layer containing the segmentation results
-        """
+        """Apply SLIC segmentation: normalize bands → stack → segment → vectorize."""
         num_bands, height, width = image_data.shape
 
         normalized_bands = []
         for i in range(num_bands):
             band = image_data[i]
-
             if band.max() == band.min():
                 normalized_bands.append(np.zeros_like(band))
                 continue
-
             norm_band = (band - band.min()) / (band.max() - band.min())
             normalized_bands.append(norm_band)
 
         multichannel_image = np.stack(normalized_bands, axis=-1)
-
         n_segments = int(width * height / (self.scale * self.scale))
-        print(f"Number of segments: {n_segments}")
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -95,7 +50,7 @@ class SlicSegmentation:
         if not layer_name:
             layer_name = f"Segmentation_scale{self.scale}_comp{self.compactness}"
 
-        layer = Layer(name=layer_name, type="segmentation")
+        layer = Layer(name=layer_name, layer_type="segmentation")
         layer.raster = segments
         layer.transform = transform
         layer.crs = crs
@@ -118,24 +73,7 @@ class SlicSegmentation:
         return layer
 
     def _create_segment_objects(self, segments, transform, crs):
-        """Create vector objects from segments.
-
-        Parameters:
-        -----------
-        segments : numpy.ndarray
-            Array with segment IDs
-        transform : affine.Affine
-            Affine transformation for the raster
-        crs : rasterio.crs.CRS
-            Coordinate reference system
-
-        Returns:
-        --------
-        segment_objects : geopandas.GeoDataFrame
-            GeoDataFrame with segment polygons
-        """
         segment_ids = np.unique(segments)
-
         geometries = []
         properties = []
 

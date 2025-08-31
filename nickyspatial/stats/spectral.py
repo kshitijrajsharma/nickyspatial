@@ -80,13 +80,11 @@ def attach_spectral_indices(layer, bands=None):
 
     indices = {}
 
-    # NDVI (Normalized Difference Vegetation Index)
     if "nir" in bands and "red" in bands:
         if bands["nir"] in layer.objects.columns and bands["red"] in layer.objects.columns:
             ndvi = attach_ndvi(layer, bands["nir"], bands["red"], "NDVI")
             indices["NDVI"] = ndvi
 
-    # NDWI (Normalized Difference Water Index)
     if "green" in bands and "nir" in bands:
         if bands["green"] in layer.objects.columns and bands["nir"] in layer.objects.columns:
             green = layer.objects[bands["green"]]
