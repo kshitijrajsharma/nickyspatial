@@ -35,7 +35,7 @@ def smooth_boundaries(source_layer, iterations=1, layer_manager=None, layer_name
     if not layer_name:
         layer_name = f"{source_layer.name}_smoothed"
 
-    result_layer = Layer(name=layer_name, parent=source_layer, type="filter")
+    result_layer = Layer(name=layer_name, parent=source_layer, layer_type="filter")
     result_layer.transform = source_layer.transform
     result_layer.crs = source_layer.crs
     result_layer.raster = source_layer.raster.copy() if source_layer.raster is not None else None
@@ -92,7 +92,7 @@ def merge_small_segments(source_layer, min_size, attribute="area_pixels", layer_
     if not layer_name:
         layer_name = f"{source_layer.name}_merged"
 
-    result_layer = Layer(name=layer_name, parent=source_layer, type="filter")
+    result_layer = Layer(name=layer_name, parent=source_layer, layer_type="filter")
     result_layer.transform = source_layer.transform
     result_layer.crs = source_layer.crs
 
@@ -200,7 +200,7 @@ def select_by_area(
     if not layer_name:
         layer_name = f"{source_layer.name}_area_filtered"
 
-    result_layer = Layer(name=layer_name, parent=source_layer, type="filter")
+    result_layer = Layer(name=layer_name, parent=source_layer, layer_type="filter")
     result_layer.transform = source_layer.transform
     result_layer.crs = source_layer.crs
 

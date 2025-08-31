@@ -98,9 +98,6 @@ def load_raster(file_path):
             st.session_state.transform = transform
             st.session_state.crs = crs
             st.session_state.manager = LayerManager()
-            # st.session_state.layers = {}
-            # st.session_state.rule_sets = {}
-            print(st.session_state.layers, "hvchdvhc")
 
             num_bands = image_data.shape[0]
             default_mappings = {}
@@ -194,8 +191,6 @@ def perform_supervised_classification_dl(layer, image_data, selected_classifier,
             samples = {}
             for key in list(st.session_state.classes.keys()):
                 samples[key] = st.session_state.classes[key]["sample_ids"]
-
-            # st.write(f"{classifier_params} : classifier_params")
 
             classifier = SupervisedClassifierDL(
                 name="CNN Classification", classifier_type=selected_classifier, classifier_params=classifier_params
@@ -428,11 +423,9 @@ def render_segmentation(index):
                 key=f"compactness_param_{index}",
             )
 
-        # st.subheader("Configure Band Mappings")
         st.markdown("#### Configure Band Mappings")
         st.write("Set up mappings for spectral bands to use in indices and analysis")
 
-        # Get raw bands from the image data
         raw_bands = [f"band_{i + 1}" for i in range(st.session_state.image_data.shape[0])]
 
         col1, col2, col3, col4 = st.columns(4)
@@ -480,7 +473,6 @@ def render_segmentation(index):
                     else min(3, len(raw_bands) - 1),
                     key=f"nir_band_{index}",
                 )
-                # process_data["params"]["segmentation_name"] = segmentation_name
 
         for key in st.session_state.band_mappings:
             if not st.session_state.band_mappings[key].endswith("_mean"):
@@ -501,23 +493,18 @@ def render_segmentation(index):
                 segmentation_name,
             )
 
-            # st.write(segmentation_layer)
-
             if segmentation_layer:
-                # print(type(segmentation_layer),"type seg layer")
                 fig = plot_layer(
                     segmentation_layer,
                     st.session_state.image_data,
-                    rgb_bands=(3, 2, 1),  # Adjusted for 0-indexed bands
+                    rgb_bands=(3, 2, 1),
                     show_boundaries=True,
                 )
                 process_data["output_fig"] = fig
-                # process_data["layer_type"] = "segmentation"
             st.success(f"Segmentation '{segmentation_name}' completed successfully!")
 
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
-            # st.pyplot(fig)
     except Exception as e:
         st.error(f"error: {str(e)}")
 
@@ -538,10 +525,8 @@ def render_calculate_features(index):
             if segmentation_for_features:
                 selected_layer = st.session_state.layers[segmentation_for_features]
 
-                # Get attributes available from the selected layer
                 layer_attributes = get_layer_attributes(segmentation_for_features)
 
-                # Find band attributes in the layer
                 band_attributes = [attr for attr in layer_attributes if attr.startswith("band_") and attr.endswith("_mean")]
 
                 feature_options = st.multiselect(
@@ -602,7 +587,6 @@ def render_calculate_features(index):
                             features_calculated = True
 
                             layer_attributes = get_layer_attributes(segmentation_for_features)
-                            # TODO: ndvi_output need to be handled properly
                             indices = [
                                 col
                                 for col in layer_attributes
@@ -687,7 +671,6 @@ def render_merge_regions(index):
             )
             process_data["params"]["layer_name"] = layer_name
 
-            # Ensure class_value is a list of valid options from value_option_list
             default_values = process_data["params"].get("class_value", ["All"])
             valid_default_values = [value for value in default_values if value in value_option_list]
             class_value = st.multiselect(
@@ -697,7 +680,7 @@ def render_merge_regions(index):
                 class_value = [item for item in value_option_list if item != "All"]
 
             process_data["params"]["class_value"] = class_value
-        execute_button = st.button("Execute", key=f"execute_merge_{index}")  # key=f"execute_merge_{index}
+        execute_button = st.button("Execute", key=f"execute_merge_{index}")
         if execute_button:
             if layer_name in list(st.session_state.layers.keys()):
                 st.error("Layer name already exists")
@@ -710,7 +693,6 @@ def render_merge_regions(index):
 
                 fig = plot_classification(merged_layer, class_field="classification", class_color=class_color)
                 process_data["output_fig"] = fig
-                # process_data["layer_type"] = "classification"
 
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
@@ -752,14 +734,12 @@ def render_enclosed_by_class(index):
         cola, colb, colc, cold = st.columns(4)
 
         with cola:
-            # Ensure class_value is a list of valid options from value_option_list
             class_value_a = process_data["params"].get("class_value", 0)
             if class_value_a in value_option_list:
                 class_value_index = value_option_list.index(class_value_a)
             else:
                 class_value_index = 0
 
-            # valid_default_values = [value for value in default_values if value in value_option_list]
             class_value = st.selectbox(
                 "Select class", options=value_option_list, index=class_value_index, key=f"class_value_{index}"
             )
@@ -790,7 +770,7 @@ def render_enclosed_by_class(index):
 
         st.session_state.classes[new_class_name] = {"color": new_class_color_1, "sample_ids": []}
 
-        execute_button = st.button("Execute", key=f"execute_enclosed_by_{index}")  # key=f"execute_enclosed_by_{index}"
+        execute_button = st.button("Execute", key=f"execute_enclosed_by_{index}")
         if execute_button:
             if layer_name in list(st.session_state.layers.keys()):
                 st.error("Layer name already exists")
@@ -810,7 +790,6 @@ def render_enclosed_by_class(index):
 
                 fig = plot_classification(enclosed_by_layer, class_field="classification", class_color=class_color)
                 process_data["output_fig"] = fig
-                # process_data["layer_type"] = "classification"
 
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
@@ -852,14 +831,12 @@ def render_touched_by_class(index):
         cola, colb, colc, cold = st.columns(4)
 
         with cola:
-            # Ensure class_value is a list of valid options from value_option_list
             class_value_a = process_data["params"].get("class_value", 0)
             if class_value_a in value_option_list:
                 class_value_index = value_option_list.index(class_value_a)
             else:
                 class_value_index = 0
 
-            # valid_default_values = [value for value in default_values if value in value_option_list]
             class_value = st.selectbox(
                 "Select class", options=value_option_list, index=class_value_index, key=f"class_value_{index}"
             )
@@ -893,7 +870,7 @@ def render_touched_by_class(index):
 
         st.session_state.classes[new_class_name] = {"color": new_class_color_1, "sample_ids": []}
 
-        execute_button = st.button("Execute", key=f"execute_touched_by_{index}")  # key=f"execute_touched_by_{index}"
+        execute_button = st.button("Execute", key=f"execute_touched_by_{index}")
         if execute_button:
             if layer_name in list(st.session_state.layers.keys()):
                 st.error("Layer name already exists")
@@ -913,7 +890,6 @@ def render_touched_by_class(index):
 
                 fig = plot_classification(touched_by_layer, class_field="classification", class_color=class_color)
                 process_data["output_fig"] = fig
-                # process_data["layer_type"] = "classification"
 
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
@@ -926,11 +902,10 @@ def render_select_samples(index):
     try:
         st.markdown("### Sample Collection")
 
-        # Sidebar for class management
         col1, col2 = st.columns([1, 3])
         with col1:
             st.markdown("#### ➕ Add New Class")
-            col2a, col2b = st.columns([2, 1])  # Adjust ratio as needed
+            col2a, col2b = st.columns([2, 1])
 
             with col2a:
                 new_class = st.text_input("Class Name", key=f"new_class_input_{index}")
@@ -954,14 +929,10 @@ def render_select_samples(index):
             st.markdown("##### Classes")
             class_names = list(st.session_state.classes.keys())
             for idx, class_name in enumerate(class_names):
-                # for class_name, class_info in st.session_state.classes.items():
-
-                # color = class_info["color"]
                 color = st.session_state.classes[class_name]["color"]
                 col1a, col2b, col3c = st.columns([0.8, 0.20, 0.20])
 
                 with col1a:
-                    # st.markdown(f"<div style='padding-top: 5px;'>{class_name}</div>", unsafe_allow_html=True)
                     st.markdown(
                         f"<div style='display:inline-flex;align-items:center;margin-bottom:0px;'>"
                         f"<div style='width:25px;height:25px;background:{color};border:1px solid black;margin-right:8px;'></div>"
@@ -976,7 +947,7 @@ def render_select_samples(index):
                         st.session_state["edit_mode"] = True
 
                 with col3c:
-                    if st.button("🗑️", key=f"delete_{class_name}"):
+                    if st.button("Delete", key=f"delete_{class_name}"):
                         del st.session_state.classes[class_name]
                         st.rerun()
             if st.session_state.edit_mode and st.session_state.edit_index is not None:
@@ -994,7 +965,6 @@ def render_select_samples(index):
                 cola1, cola2 = st.columns([0.3, 0.5])
                 with cola1:
                     if st.button("Update", key=f"save_changes_{index}"):
-                        # Apply changes
                         st.session_state.classes[new_name] = {
                             "color": new_color,
                             "sample_ids": st.session_state.classes[class_name]["sample_ids"],
@@ -1025,8 +995,6 @@ def render_select_samples(index):
 
             st.markdown("### Click Segments on Interactive Map")
 
-            # st.markdown("#### Load Example Rule Sets")
-
             if st.button("Load Training Sample Example", key=f"load_sample_{index}"):
                 st.session_state.classes = {
                     "Water": {"color": "#3437c2", "sample_ids": [102, 384, 659, 1142, 1662, 1710, 2113, 2182, 2481, 1024]},
@@ -1034,7 +1002,6 @@ def render_select_samples(index):
                     "Vegetation": {"color": "#0f6b2f", "sample_ids": [832, 1778, 2035, 1417, 1263, 242, 2049, 2397]},
                 }
 
-            # Select the input layer
             layers_keys = list(st.session_state.layers.keys())
             if not layers_keys:
                 st.warning("No segmentation layers available in session state.")
@@ -1052,11 +1019,8 @@ def render_select_samples(index):
 
             image_data = st.session_state.image_data
 
-            # rgb_bands = (3, 2, 1)  # Adjust as needed
-
             # Create RGB base image (grayscale fallback)
             if image_data.shape[0] >= 3:
-                # Get raw bands from the image data
                 raw_bands = [f"band_{i + 1}" for i in range(image_data.shape[0])]
 
                 col1, col2, col3 = st.columns(3)
@@ -1115,10 +1079,10 @@ def render_select_samples(index):
                 if color.startswith("#"):
                     color_rgb = [int(color[i : i + 2], 16) for i in (1, 3, 5)]
                 else:
-                    color_rgb = color  # Assume it's already an RGB triplet
+                    color_rgb = color
                 for seg_id in class_data["sample_ids"]:
                     mask = segments == seg_id
-                    for c in range(3):  # RGB channels
+                    for c in range(3):
                         segment_colored_img[:, :, c][mask] = color_rgb[c]
 
             if show_boundaries:
@@ -1165,8 +1129,6 @@ def render_select_samples(index):
             ).add_to(fmap)
             folium.LayerControl().add_to(fmap)
 
-            # st.write(st.session_state.classes)
-
             # Display the map and handle click events
             click_info = st_folium(fmap, height=600, width=1000, key=f"map_folium_{index}")
 
@@ -1191,11 +1153,8 @@ def render_select_samples(index):
                                 break
                         if found and seg_id in st.session_state.classes[selected_class]["sample_ids"]:
                             st.session_state.classes[selected_class]["sample_ids"].remove(seg_id)
-                            # st.success(f"Segment ID: {seg_id} at ({col}, {row}) removed from {selected_class}.")
                         elif not found and seg_id not in st.session_state.classes[selected_class]["sample_ids"]:
                             st.session_state.classes[selected_class]["sample_ids"].append(seg_id)
-                            # st.success(f"Segment ID: {seg_id} at ({col}, {row}) added to {selected_class}.")
-                        # st.write(st.session_state.classes)
                         st.rerun()
     except Exception as e:
         st.error(f"error: {str(e)}")
@@ -1268,8 +1227,6 @@ def render_supervised_classification(index):
                     process_data["output_fig"] = fig
                     process_data["accuracy"] = accuracy
                     process_data["feature_importances"] = feature_importances
-                    # process_data["layer_type"] = "classification"
-                    # st.session_state.classification_fig = fig  # Store the figure in session state
             if "accuracy" in process_data:
                 st.write(f"OOB Score: {process_data['accuracy']}")
             if "output_fig" in process_data:
@@ -1350,7 +1307,7 @@ def render_supervised_classification_deeplearning(index):
                     use_batch_norm = st.selectbox(
                         "Use batch normalization",
                         options=[True, False],
-                        index=0,  # default to True
+                        index=0,
                         key="batch_norm",
                     )
 
@@ -1358,7 +1315,6 @@ def render_supervised_classification_deeplearning(index):
                 hidden_layers_config = []
 
                 for i in range(num_layers):
-                    # st.write(f"###### Layer {i+1} configuration")
                     col2a, col2b, col2c, col2d = st.columns(4)
                     with col2a:
                         st.write(f"Layer {i + 1}")
@@ -1371,7 +1327,7 @@ def render_supervised_classification_deeplearning(index):
                         max_pooling = st.selectbox(
                             "Use Max Pooling",
                             options=[True, False],
-                            index=0,  # default to True
+                            index=0,
                             key=f"pool_{i}",
                         )
 
@@ -1679,7 +1635,7 @@ def render_process_tab():
             st.session_state.processes.append(
                 {
                     "id": len(st.session_state.processes),
-                    "type": "",  # Default process type
+                    "type": "",
                 }
             )
 
@@ -1720,7 +1676,7 @@ def render_process_tab():
                 elif selected_operation == "Touched_by":
                     render_touched_by_class(i)
 
-            if st.button("🗑️ Delete", key=f"delete_{i}"):
+            if st.button("Delete", key=f"delete_{i}"):
                 st.session_state.delete_index = i
                 st.rerun()
 
@@ -1731,11 +1687,9 @@ def render_process_tab():
         #     st.session_state.processes.append(
         #         {
         #             "id": len(st.session_state.processes),
-        #             "type": "",  # Default process type
+        #             "type": "",
         #         }
         #     )
-
-        # st.write(st.session_state.processes)
 
         if st.session_state.delete_index is not None:
             del st.session_state.processes[st.session_state.delete_index]
@@ -1787,7 +1741,7 @@ def render_layer_manager_tab():
                                 fig = plot_layer(
                                     layer,
                                     st.session_state.image_data,
-                                    rgb_bands=(2, 1, 0),  # Adjusted for 0-indexed bands
+                                    rgb_bands=(2, 1, 0),
                                     show_boundaries=True,
                                 )
                                 st.pyplot(fig)

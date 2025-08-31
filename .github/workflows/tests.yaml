@@ -7,7 +7,7 @@ on:
     branches: [master]
 
 jobs:
-  publish:
+  test:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -23,6 +23,12 @@ jobs:
 
       - name: Set up Python
         run: uv python install
+
+      - name: Install dependencies with CNN support
+        run: uv sync --group cnn
+
+      - name: Run pre-commit checks
+        run: uv run pre-commit run --all-files
 
       - name: Run tests
         run: uv run pytest

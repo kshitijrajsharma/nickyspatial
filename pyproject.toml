@@ -33,7 +33,6 @@ dependencies = [
     "ipywidgets>=8.1.7",
     "ipympl>=0.9.7",
     "plotly>=6.0.1",
-    "tensorflow>=2.19.0",
     "nbformat>=5.10.4",
 ]
 
@@ -55,6 +54,10 @@ dev = [
 
 ui = [
     "streamlit>=1.44.1",
+]
+
+cnn = [
+    "tensorflow>=2.19.0",
 ]
 
 [project.optional-dependencies]
@@ -100,3 +103,26 @@ select = ["I", "E", "W", "D", "B", "F", "N", "Q"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "cnn: marks tests that require TensorFlow/CNN functionality",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+python_files = [
+    "test_*.py",
+    "*_test.py",
+]
+python_classes = [
+    "Test*",
+]
+python_functions = [
+    "test_*",
+]

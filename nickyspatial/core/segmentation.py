@@ -29,24 +29,7 @@ class BaseSegmentation:
         pass
 
     def _create_segment_objects(self, segments, transform, crs):
-        """Create vector objects from segments.
-
-        Parameters:
-        -----------
-        segments : numpy.ndarray
-            Array with segment IDs
-        transform : affine.Affine
-            Affine transformation for the raster
-        crs : rasterio.crs.CRS
-            Coordinate reference system
-
-        Returns:
-        --------
-        segment_objects : geopandas.GeoDataFrame
-            GeoDataFrame with segment polygons
-        """
         segment_ids = np.unique(segments)
-
         geometries = []
         properties = []
 
@@ -240,7 +223,7 @@ class SlicSegmentation(BaseSegmentation):
         if not layer_name:
             layer_name = f"Segmentation_scale{self.scale}_comp{self.compactness}"
 
-        layer = Layer(name=layer_name, type="segmentation")
+        layer = Layer(name=layer_name, layer_type="segmentation")
         layer.raster = segments
         layer.transform = transform
         layer.crs = crs
@@ -316,7 +299,7 @@ class FelzenszwalbSegmentation(BaseSegmentation):
         if not layer_name:
             layer_name = f"Felzenszwalb_scale{self.scale}_sigma{self.sigma}"
 
-        layer = Layer(name=layer_name, type="segmentation")
+        layer = Layer(name=layer_name, layer_type="segmentation")
         layer.raster = segments
         layer.transform = transform
         layer.crs = crs
@@ -452,7 +435,7 @@ class WatershedSegmentation(BaseSegmentation):
             layer_name = f"Watershed_{self.preprocessing}_n{self.n_points}_comp{self.compactness}"
 
         # Create layer
-        layer = Layer(name=layer_name, type="segmentation")
+        layer = Layer(name=layer_name, layer_type="segmentation")
         layer.raster = segments
         layer.transform = transform
         layer.crs = crs
@@ -642,7 +625,7 @@ class RegularGridSegmentation(BaseSegmentation):
             layer_name = f"RegularGrid_{self.grid_size[0]}x{self.grid_size[1]}_overlap{self.overlap}"
 
         # Create layer
-        layer = Layer(name=layer_name, type="segmentation")
+        layer = Layer(name=layer_name, layer_type="segmentation")
         layer.raster = segments
         layer.transform = transform
         layer.crs = crs

@@ -46,7 +46,7 @@ def enhance_contrast(
     if not layer_name:
         layer_name = f"{source_layer.name}_enhanced"
 
-    result_layer = Layer(name=layer_name, parent=source_layer, type="filter")
+    result_layer = Layer(name=layer_name, parent=source_layer, layer_type="filter")
     result_layer.transform = source_layer.transform
     result_layer.crs = source_layer.crs
     result_layer.objects = source_layer.objects.copy() if source_layer.objects is not None else None
@@ -97,7 +97,7 @@ def spectral_filter(source_layer, expression, layer_manager=None, layer_name=Non
     if not layer_name:
         layer_name = f"{source_layer.name}_spectral_filtered"
 
-    result_layer = Layer(name=layer_name, parent=source_layer, type="filter")
+    result_layer = Layer(name=layer_name, parent=source_layer, layer_type="filter")
     result_layer.transform = source_layer.transform
     result_layer.crs = source_layer.crs
 

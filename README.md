@@ -62,8 +62,26 @@ pip install nickyspatial
 
 ```python
 import nickyspatial as ns
- TODO : add sample computation here
 
+# Load a raster image
+layer = ns.read_raster("path/to/your/satellite_image.tif")
+
+# Perform segmentation
+segments = ns.SlicSegmentation(scale=20, compactness=0.5)
+segmented_layer = segments.execute(layer.raster, layer.transform, layer.crs)
+
+# Calculate statistics
+ns.attach_basic_stats(segmented_layer, "mean_intensity")
+ns.attach_area_stats(segmented_layer)
+ns.attach_spectral_indices(segmented_layer, indices=["ndvi"])
+
+# Apply rules for classification
+ruleset = ns.RuleSet(name="Land_Cover")
+ruleset.add_rule(name="vegetation", condition="ndvi > 0.3 & area_units > 100")
+classified_layer = ruleset.execute(segmented_layer, result_field="classification")
+
+# Visualize results
+ns.plot_layer_interactive(classified_layer, "classification")
 ```
 
 ## Documentation
@@ -73,13 +91,25 @@ Deepwiki also provides documentation quite detailed , Do check it [out](https://
 
 ## Examples
 
-Check out the 'examples' directory for more examples:
+Check out our comprehensive examples:
 
-TODO : Add example scripts here
+- [Basic Usage](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/simple_usecase.ipynb): Complete workflow from loading data to visualization
+- [Supervised Classification](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/supervised_classification.ipynb): Machine learning-based classification with traditional algorithms
+- [CNN Classification](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/CNN.ipynb): Deep learning approach using TensorFlow/Keras
+- [Interactive Demo](https://nickyspatial-gpoqz.ondigitalocean.app/): Web-based interface for exploring features
+
+### Key Features Demonstrated:
+
+- Image Segmentation: SLIC algorithm for object-based analysis
+- Statistical Analysis: Calculate spatial, spectral, and basic statistics
+- Classification: Both traditional ML and deep learning approaches
+- Rule Engine: Apply custom rules for object classification
+- Visualization: Interactive maps and statistical charts
+- I/O Operations: Read/write raster and vector formats
 
 ## Contributing
 
-Contributions are welcome! Follow [dev setup guide](./docs/dev.md) & Please feel free to submit a Pull Request.
+Contributions are welcome! Follow [dev setup guide](https://kshitijrajsharma.github.io/nickyspatial/dev/) & Please feel free to submit a Pull Request.
 
 ## Acknowledgments
 
