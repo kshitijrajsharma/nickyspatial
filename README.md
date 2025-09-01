@@ -93,9 +93,9 @@ Deepwiki also provides documentation quite detailed , Do check it [out](https://
 
 Check out our comprehensive examples:
 
-- [Basic Usage](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/simple_usecase.ipynb): Complete workflow from loading data to visualization
-- [Supervised Classification](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/supervised_classification.ipynb): Machine learning-based classification with traditional algorithms
-- [CNN Classification](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/CNN.ipynb): Deep learning approach using TensorFlow/Keras
+- [Basic Usage](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/01_basic_segmentation_workflow.ipynb): Complete workflow from loading data to visualization
+- [Supervised Classification](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/02_supervised_classification.ipynb): Machine learning-based classification with traditional algorithms
+- [CNN Classification](https://github.com/kshitijrajsharma/nickyspatial/blob/master/docs/examples/03_cnn_deep_learning_classification.ipynb): Deep learning approach using TensorFlow/Keras
 - [Interactive Demo](https://nickyspatial-gpoqz.ondigitalocean.app/): Web-based interface for exploring features
 
 ### Key Features Demonstrated:

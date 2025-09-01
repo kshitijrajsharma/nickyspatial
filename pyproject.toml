@@ -50,6 +50,9 @@ dev = [
     "pre-commit>=4.2.0",
     "pytest>=8.3.5",
     "ruff>=0.11.3",
+    "nbqa>=1.8.7",
+    "nbstripout>=0.7.1",
+    "ipykernel>=6.29.5",
 ]
 
 ui = [
@@ -95,14 +98,32 @@ exclude = [
     "build",
     "dist",
     "nickyspatial/__init__.py",
-    "*.ipynb"
 ]
 
 [tool.ruff.lint]
-select = ["I", "E", "W", "D", "B", "F", "N", "Q"]
+ignore = [
+    "D100",
+    "D103",
+    "E402",
+    "F401",
+    "F811",
+    "F841",
+    "N816",
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = [
+    "D100", "D103",
+    "E402",
+    "F401", "F811", "F841",
+    "N816",
+    "E501",
+]
+"docs/examples/*.ipynb" = ["E402", "F403", "D100", "D103", "F841", "N816", "E501"]
+"class_samples/*.ipynb" = ["E402", "F403", "D100", "D103", "F841", "N816", "E501", "F811"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

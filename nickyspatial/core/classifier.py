@@ -182,9 +182,7 @@ class SupervisedClassifier:
 
         result_layer.objects = layer
 
-        result_layer.metadata = {
-            "supervised classification": self.name,
-        }
+        result_layer.metadata = {"supervised classification": self.name, "classifier_params": self.classifier_params}
 
         if layer_manager:
             layer_manager.add_layer(result_layer)
