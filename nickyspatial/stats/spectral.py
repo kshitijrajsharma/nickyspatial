@@ -181,16 +181,26 @@ class SpectralIndexCalculator:
         safe_dict = {
             "bands": bands_data,
             "np": np,
+            "NP": np,
             "__builtins__": {},
             "abs": abs,
+            "ABS": abs,
             "min": min,
+            "MIN": min,
             "max": max,
+            "MAX": max,
             "sqrt": np.sqrt,
+            "SQRT": np.sqrt,
             "log": np.log,
+            "LOG": np.log,
             "exp": np.exp,
+            "EXP": np.exp,
             "sin": np.sin,
+            "SIN": np.sin,
             "cos": np.cos,
+            "COS": np.cos,
             "tan": np.tan,
+            "TAN": np.tan,
         }
 
         try:
