@@ -1768,6 +1768,7 @@ cnn = [
 ]
 dev = [
     { name = "commitizen" },
+    { name = "ipykernel" },
     { name = "nbqa" },
     { name = "nbstripout" },
     { name = "pre-commit" },
@@ -1808,6 +1809,7 @@ provides-extras = ["docs"]
 cnn = [{ name = "tensorflow", specifier = ">=2.19.0" }]
 dev = [
     { name = "commitizen", specifier = ">=4.4.1" },
+    { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "nbqa", specifier = ">=1.8.7" },
     { name = "nbstripout", specifier = ">=0.7.1" },
     { name = "pre-commit", specifier = ">=4.2.0" },
