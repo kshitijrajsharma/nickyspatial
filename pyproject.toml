@@ -50,6 +50,8 @@ dev = [
     "pre-commit>=4.2.0",
     "pytest>=8.3.5",
     "ruff>=0.11.3",
+    "nbqa>=1.8.7",
+    "nbstripout>=0.7.1",
 ]
 
 ui = [
@@ -95,14 +97,34 @@ exclude = [
     "build",
     "dist",
     "nickyspatial/__init__.py",
-    "*.ipynb"
 ]
 
 [tool.ruff.lint]
-select = ["I", "E", "W", "D", "B", "F", "N", "Q"]
+# Ignore common notebook issues
+ignore = [
+    "D100",  # Missing docstring in public module
+    "D103",  # Missing docstring in public function
+    "E402",  # Module level import not at top of file
+    "F401",  # Imported but unused
+    "F811",  # Redefinition of unused variable
+    "F841",  # Local variable assigned but never used
+    "N816",  # Variable in global scope should not be mixedCase
+]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+# Per-file ignores for notebooks
+[tool.ruff.lint.per-file-ignores]
+"*.ipynb" = [
+    "D100", "D103",  # Missing docstrings
+    "E402",          # Module level import not at top
+    "F401", "F811", "F841",  # Import/variable issues
+    "N816",          # Naming conventions
+    "E501",          # Line too long (notebooks often have long outputs)
+]
+"docs/examples/*.ipynb" = ["E402", "F403", "D100", "D103", "F841", "N816", "E501"]
+"class_samples/*.ipynb" = ["E402", "F403", "D100", "D103", "F841", "N816", "E501", "F811"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"

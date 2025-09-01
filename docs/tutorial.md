@@ -74,5 +74,5 @@ Objects can be classified using:
 ## Next Steps
 
 - Explore the [Features](features.md) page for comprehensive functionality
-- Check out detailed [Examples](examples/simple_usecase.ipynb)
+- Check out detailed [Examples](examples/01_basic_segmentation_workflow.ipynb)
 - Review the [API Reference](reference.md) for complete documentation

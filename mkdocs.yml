@@ -78,9 +78,10 @@ nav:
  - Features: features.md
  - API Reference: reference.md
  - Examples:
-    - Getting Started: examples/simple_usecase.ipynb
-    - Supervised Classification: examples/supervised_classification.ipynb
-    - Deep Learning (CNN): examples/CNN.ipynb
+    - Getting Started: examples/01_basic_segmentation_workflow.ipynb
+    - Supervised Classification: examples/02_supervised_classification.ipynb
+    - Deep Learning (CNN): examples/03_cnn_deep_learning_classification.ipynb
+    - Advanced Segmentation: examples/04_advanced_segmentation_algorithms.ipynb
  - Development:
     - Setup Guide: dev.md
 

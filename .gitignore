@@ -1,22 +1,19 @@
 # Python-generated files
-__pycache__/
+# Virtual environments
+*.egg-info
 *.py[oc]
+.DS_STORE
+.coverage
+.venv
+__pycache__/
 build/
 dist/
-wheels/
-*.egg-info
-
-.DS_STORE
-# Virtual environments
-.venv
+docs/examples/data/
 env
-output/
-
 get-pip.py
 my_changes.txt
 my_reference.ipynb
 object_based_image_analysis/
-docs/examples/data/
-.coverage
-
+output/
 site
+wheels/

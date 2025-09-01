@@ -29,18 +29,82 @@ class BaseSegmentation:
         """Initialize the base segmentation class."""
         pass
 
-    def _validate_inputs(self, image_data, transform, crs):
+    def _validate_inputs(self, image_data, transform, crs, raster_path=None):
         """Validate common inputs across all segmentation algorithms."""
-        if image_data is None:
-            raise ValueError("image_data cannot be None")
-        if len(image_data.shape) != 3:
-            raise ValueError("image_data must be 3D array (bands, height, width)")
-        if image_data.size == 0:
-            raise ValueError("image_data cannot be empty")
-        if transform is None:
-            raise ValueError("transform cannot be None")
-        if crs is None:
-            raise ValueError("crs cannot be None")
+        # If raster_path is provided, other params are optional (will be auto-extracted)
+        if raster_path is None:
+            if image_data is None:
+                raise ValueError("Either image_data or raster_path must be provided")
+            if transform is None:
+                raise ValueError("transform cannot be None when image_data is provided")
+            if crs is None:
+                raise ValueError("crs cannot be None when image_data is provided")
+
+        if image_data is not None:
+            if len(image_data.shape) != 3:
+                raise ValueError("image_data must be 3D array (bands, height, width)")
+            if image_data.size == 0:
+                raise ValueError("image_data cannot be empty")
+
+    def _prepare_inputs(self, image_data=None, transform=None, crs=None, raster_path=None, target_crs=None):
+        """Prepare and validate inputs for segmentation algorithms.
+
+        Handles automatic raster loading and CRS reprojection.
+
+        Returns:
+        --------
+        tuple : (image_data, transform, crs)
+            Processed inputs ready for segmentation
+        """
+        # Auto-load from raster file if path provided
+        if raster_path is not None:
+            from ..io.raster import read_raster
+
+            image_data, transform, crs = read_raster(raster_path)
+
+        # Handle CRS reprojection if target_crs is specified
+        if target_crs is not None and target_crs != crs:
+            # Import here to avoid circular dependency
+            from rasterio.warp import reproject, Resampling, calculate_default_transform
+            from rasterio.crs import CRS
+            from rasterio.transform import array_bounds
+
+            # Convert target_crs to CRS object if it's a string
+            if isinstance(target_crs, str):
+                target_crs = CRS.from_string(target_crs)
+
+            # Calculate new transform and dimensions
+            new_transform, new_width, new_height = calculate_default_transform(
+                crs,
+                target_crs,
+                image_data.shape[2],
+                image_data.shape[1],
+                *array_bounds(image_data.shape[1], image_data.shape[2], transform),
+            )
+
+            # Create output array
+            reprojected_data = np.zeros((image_data.shape[0], new_height, new_width), dtype=image_data.dtype)
+
+            # Reproject each band
+            for band_idx in range(image_data.shape[0]):
+                reproject(
+                    source=image_data[band_idx],
+                    destination=reprojected_data[band_idx],
+                    src_transform=transform,
+                    src_crs=crs,
+                    dst_transform=new_transform,
+                    dst_crs=target_crs,
+                    resampling=Resampling.bilinear,
+                )
+
+            image_data = reprojected_data
+            transform = new_transform
+            crs = target_crs
+
+        # Validate inputs
+        self._validate_inputs(image_data, transform, crs, raster_path)
+
+        return image_data, transform, crs
 
     def _create_segment_objects(self, segments, transform, crs):
         segment_ids = np.unique(segments)
@@ -194,17 +258,28 @@ class SlicSegmentation(BaseSegmentation):
         self.compactness = compactness
         self.slic_kwargs = kwargs
 
-    def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
+    def execute(
+        self, image_data=None, transform=None, crs=None, raster_path=None, target_crs=None, layer_manager=None, layer_name=None
+    ):
         """Perform segmentation and create a layer with the results.
 
         Parameters:
         -----------
-        image_data : numpy.ndarray
-            Array with raster data values (bands, height, width)
-        transform : affine.Affine
-            Affine transformation for the raster
-        crs : rasterio.crs.CRS
-            Coordinate reference system
+        image_data : numpy.ndarray, optional
+            Array with raster data values (bands, height, width).
+            If not provided, must specify raster_path.
+        transform : affine.Affine, optional
+            Affine transformation for the raster.
+            If not provided, will be extracted from raster_path.
+        crs : rasterio.crs.CRS, optional
+            Coordinate reference system.
+            If not provided, will be extracted from raster_path.
+        raster_path : str, optional
+            Path to raster file. If provided, image_data, transform, and crs
+            will be extracted automatically.
+        target_crs : str or rasterio.crs.CRS, optional
+            Target CRS for the output. If different from input CRS,
+            automatic reprojection will be performed.
         layer_manager : LayerManager, optional
             Layer manager to add the result layer to
         layer_name : str, optional
@@ -216,7 +291,9 @@ class SlicSegmentation(BaseSegmentation):
             Layer containing the segmentation results
         """
         start_time = time.time()
-        self._validate_inputs(image_data, transform, crs)
+
+        # Prepare inputs (handles auto-loading and reprojection)
+        image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
 
         multichannel_image = self._normalize_bands(image_data)
@@ -297,10 +374,14 @@ class FelzenszwalbSegmentation(BaseSegmentation):
         self.min_size = min_size
         self.fz_kwargs = kwargs
 
-    def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
+    def execute(
+        self, image_data=None, transform=None, crs=None, raster_path=None, target_crs=None, layer_manager=None, layer_name=None
+    ):
         """Perform Felzenszwalb segmentation and create a layer with the results."""
         start_time = time.time()
-        self._validate_inputs(image_data, transform, crs)
+
+        # Prepare inputs (handles auto-loading and reprojection)
+        image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
         multichannel_image = self._normalize_bands(image_data)
 
@@ -414,10 +495,14 @@ class WatershedSegmentation(BaseSegmentation):
 
         return seeds
 
-    def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
+    def execute(
+        self, image_data=None, transform=None, crs=None, raster_path=None, target_crs=None, layer_manager=None, layer_name=None
+    ):
         """Perform watershed segmentation and create a layer with the results."""
         start_time = time.time()
-        self._validate_inputs(image_data, transform, crs)
+
+        # Prepare inputs (handles auto-loading and reprojection)
+        image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
 
         # Normalize the image data
@@ -610,10 +695,14 @@ class RegularGridSegmentation(BaseSegmentation):
 
         return segments
 
-    def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
+    def execute(
+        self, image_data=None, transform=None, crs=None, raster_path=None, target_crs=None, layer_manager=None, layer_name=None
+    ):
         """Perform regular grid segmentation and create a layer with the results."""
         start_time = time.time()
-        self._validate_inputs(image_data, transform, crs)
+
+        # Prepare inputs (handles auto-loading and reprojection)
+        image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
 
         print(f"RegularGrid - Processing {height}x{width} image with {num_bands} bands")
