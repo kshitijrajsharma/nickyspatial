@@ -10,6 +10,7 @@ Algorithms:
 - RegularGridSegmentation: Simple grid-based segmentation
 """
 
+import time
 import warnings
 
 import geopandas as gpd
@@ -27,6 +28,19 @@ class BaseSegmentation:
     def __init__(self):
         """Initialize the base segmentation class."""
         pass
+
+    def _validate_inputs(self, image_data, transform, crs):
+        """Validate common inputs across all segmentation algorithms."""
+        if image_data is None:
+            raise ValueError("image_data cannot be None")
+        if len(image_data.shape) != 3:
+            raise ValueError("image_data must be 3D array (bands, height, width)")
+        if image_data.size == 0:
+            raise ValueError("image_data cannot be empty")
+        if transform is None:
+            raise ValueError("transform cannot be None")
+        if crs is None:
+            raise ValueError("crs cannot be None")
 
     def _create_segment_objects(self, segments, transform, crs):
         segment_ids = np.unique(segments)
@@ -201,6 +215,8 @@ class SlicSegmentation(BaseSegmentation):
         layer : Layer
             Layer containing the segmentation results
         """
+        start_time = time.time()
+        self._validate_inputs(image_data, transform, crs)
         num_bands, height, width = image_data.shape
 
         multichannel_image = self._normalize_bands(image_data)
@@ -232,6 +248,7 @@ class SlicSegmentation(BaseSegmentation):
             "compactness": self.compactness,
             "n_segments": n_segments,
             "num_segments_actual": len(np.unique(segments)),
+            "execution_time_seconds": round(time.time() - start_time, 3),
         }
 
         if self.slic_kwargs:
@@ -282,6 +299,8 @@ class FelzenszwalbSegmentation(BaseSegmentation):
 
     def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
         """Perform Felzenszwalb segmentation and create a layer with the results."""
+        start_time = time.time()
+        self._validate_inputs(image_data, transform, crs)
         num_bands, height, width = image_data.shape
         multichannel_image = self._normalize_bands(image_data)
 
@@ -309,6 +328,7 @@ class FelzenszwalbSegmentation(BaseSegmentation):
             "sigma": self.sigma,
             "min_size": self.min_size,
             "num_segments_actual": len(np.unique(segments)),
+            "execution_time_seconds": round(time.time() - start_time, 3),
         }
 
         if self.fz_kwargs:
@@ -396,6 +416,8 @@ class WatershedSegmentation(BaseSegmentation):
 
     def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
         """Perform watershed segmentation and create a layer with the results."""
+        start_time = time.time()
+        self._validate_inputs(image_data, transform, crs)
         num_bands, height, width = image_data.shape
 
         # Normalize the image data
@@ -447,6 +469,7 @@ class WatershedSegmentation(BaseSegmentation):
             "watershed_line": self.watershed_line,
             "num_seeds": actual_seeds,
             "num_segments_actual": len(np.unique(segments)),
+            "execution_time_seconds": round(time.time() - start_time, 3),
         }
 
         if self.watershed_kwargs:
@@ -589,6 +612,8 @@ class RegularGridSegmentation(BaseSegmentation):
 
     def execute(self, image_data, transform, crs, layer_manager=None, layer_name=None):
         """Perform regular grid segmentation and create a layer with the results."""
+        start_time = time.time()
+        self._validate_inputs(image_data, transform, crs)
         num_bands, height, width = image_data.shape
 
         print(f"RegularGrid - Processing {height}x{width} image with {num_bands} bands")
@@ -638,6 +663,7 @@ class RegularGridSegmentation(BaseSegmentation):
             "n_cols": grid_info["n_cols"],
             "num_segments_actual": len(np.unique(segments[segments > 0])),
             "image_shape": (height, width),
+            "execution_time_seconds": round(time.time() - start_time, 3),
         }
 
         # Create segment objects
