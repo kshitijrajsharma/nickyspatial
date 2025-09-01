@@ -56,24 +56,19 @@ class BaseSegmentation:
         tuple : (image_data, transform, crs)
             Processed inputs ready for segmentation
         """
-        # Auto-load from raster file if path provided
         if raster_path is not None:
             from ..io.raster import read_raster
 
             image_data, transform, crs = read_raster(raster_path)
 
-        # Handle CRS reprojection if target_crs is specified
         if target_crs is not None and target_crs != crs:
-            # Import here to avoid circular dependency
             from rasterio.warp import reproject, Resampling, calculate_default_transform
             from rasterio.crs import CRS
             from rasterio.transform import array_bounds
 
-            # Convert target_crs to CRS object if it's a string
             if isinstance(target_crs, str):
                 target_crs = CRS.from_string(target_crs)
 
-            # Calculate new transform and dimensions
             new_transform, new_width, new_height = calculate_default_transform(
                 crs,
                 target_crs,
@@ -82,10 +77,8 @@ class BaseSegmentation:
                 *array_bounds(image_data.shape[1], image_data.shape[2], transform),
             )
 
-            # Create output array
             reprojected_data = np.zeros((image_data.shape[0], new_height, new_width), dtype=image_data.dtype)
 
-            # Reproject each band
             for band_idx in range(image_data.shape[0]):
                 reproject(
                     source=image_data[band_idx],
@@ -101,7 +94,6 @@ class BaseSegmentation:
             transform = new_transform
             crs = target_crs
 
-        # Validate inputs
         self._validate_inputs(image_data, transform, crs, raster_path)
 
         return image_data, transform, crs
@@ -236,7 +228,7 @@ class SlicSegmentation(BaseSegmentation):
     considering shape compactness.
     """
 
-    def __init__(self, scale=15, compactness=0.6, **kwargs):  # FIX: Added **kwargs support
+    def __init__(self, scale=15, compactness=0.6, **kwargs):
         """Initialize the segmentation algorithm.
 
         Parameters:
@@ -253,7 +245,7 @@ class SlicSegmentation(BaseSegmentation):
         **kwargs : dict
             Additional parameters passed to skimage.segmentation.slic()
         """
-        super().__init__()  # FIX: Call parent constructor
+        super().__init__()
         self.scale = scale
         self.compactness = compactness
         self.slic_kwargs = kwargs
@@ -292,7 +284,6 @@ class SlicSegmentation(BaseSegmentation):
         """
         start_time = time.time()
 
-        # Prepare inputs (handles auto-loading and reprojection)
         image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
 
@@ -380,7 +371,6 @@ class FelzenszwalbSegmentation(BaseSegmentation):
         """Perform Felzenszwalb segmentation and create a layer with the results."""
         start_time = time.time()
 
-        # Prepare inputs (handles auto-loading and reprojection)
         image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
         multichannel_image = self._normalize_bands(image_data)
@@ -393,7 +383,6 @@ class FelzenszwalbSegmentation(BaseSegmentation):
                 multichannel_image, scale=self.scale, sigma=self.sigma, min_size=self.min_size, channel_axis=-1, **self.fz_kwargs
             )
 
-        # Relabel segments to start from 1
         segments = segments + 1
 
         if not layer_name:
@@ -470,7 +459,6 @@ class WatershedSegmentation(BaseSegmentation):
     def _preprocess_image(self, image):
         """Apply edge detection preprocessing to the image before watershed segmentation."""
         if len(image.shape) == 3:
-            # Convert multichannel to grayscale for preprocessing
             image = np.mean(image, axis=-1)
 
         if self.preprocessing == "sobel":
@@ -486,10 +474,8 @@ class WatershedSegmentation(BaseSegmentation):
 
     def _generate_seeds(self, image_shape, n_points):
         """Generate seed points using regular grid approach."""
-        # Generate regular grid of points
         grid = util.regular_grid(image_shape, n_points=n_points)
 
-        # Create seeds array
         seeds = np.zeros(image_shape, dtype=int)
         seeds[grid] = np.arange(seeds[grid].size).reshape(seeds[grid].shape) + 1
 
@@ -501,25 +487,20 @@ class WatershedSegmentation(BaseSegmentation):
         """Perform watershed segmentation and create a layer with the results."""
         start_time = time.time()
 
-        # Prepare inputs (handles auto-loading and reprojection)
         image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
 
-        # Normalize the image data
         multichannel_image = self._normalize_bands(image_data)
 
         print(f"Watershed - Processing {height}x{width} image with {num_bands} bands")
         print(f"Using {self.n_points} seed points with {self.preprocessing} edge detection")
 
-        # Preprocess the image (edge detection)
         edges = self._preprocess_image(multichannel_image)
 
-        # Generate seeds using regular grid
         seeds = self._generate_seeds((height, width), self.n_points)
-        actual_seeds = len(np.unique(seeds)) - 1  # Exclude background (0)
+        actual_seeds = len(np.unique(seeds)) - 1
         print(f"Generated {actual_seeds} seed points")
 
-        # Apply watershed segmentation
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             segments = segmentation.watershed(
@@ -701,21 +682,17 @@ class RegularGridSegmentation(BaseSegmentation):
         """Perform regular grid segmentation and create a layer with the results."""
         start_time = time.time()
 
-        # Prepare inputs (handles auto-loading and reprojection)
         image_data, transform, crs = self._prepare_inputs(image_data, transform, crs, raster_path, target_crs)
         num_bands, height, width = image_data.shape
 
         print(f"RegularGrid - Processing {height}x{width} image with {num_bands} bands")
         print(f"Grid size: {self.grid_size}, Overlap: {self.overlap}, Boundary: {self.boundary_handling}")
 
-        # Calculate grid layout
         grid_info = self._calculate_grid_dimensions((height, width))
 
         print(f"Creating {grid_info['n_rows']}x{grid_info['n_cols']} = {grid_info['n_rows'] * grid_info['n_cols']} segments")
 
-        # Handle padding if needed
         if self.boundary_handling == "pad" and (grid_info["pad_h"] > 0 or grid_info["pad_w"] > 0):
-            # Pad the image
             padded_image = np.pad(image_data, ((0, 0), (0, grid_info["pad_h"]), (0, grid_info["pad_w"])), mode="reflect")
             working_shape = (grid_info["padded_height"], grid_info["padded_width"])
             print(f"Padded image to {working_shape} (added {grid_info['pad_h']}x{grid_info['pad_w']} pixels)")
@@ -723,7 +700,6 @@ class RegularGridSegmentation(BaseSegmentation):
             padded_image = image_data
             working_shape = (height, width)
 
-        # Create grid segments
         segments = self._create_grid_segments(working_shape, grid_info)
 
         # If we padded, crop back to original size
