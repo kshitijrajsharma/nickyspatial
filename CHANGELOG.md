@@ -1,3 +1,15 @@
+## v1.1.1 (2025-09-03)
+
+### Fix
+
+- **test**: fixes test cases for spectral indicies
+- **crs**: fixes issues on the transoform being the arg compulsory as ideally we should figureout the transofrm based on crs supplied and make it optional
+- **perf**: adds performance metrics in the segmentation metadata
+
+### Refactor
+
+- **toml**: adds ipykernel to run notebooks in dev env
+
 ## v1.1.0 (2025-08-31)
 
 ### Feat
