@@ -14,12 +14,12 @@ repos:
       - id: detect-private-key
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.8.22
+    rev: 0.9.9
     hooks:
       - id: uv-lock
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.2
+    rev: v0.14.5
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, --show-fixes]
@@ -34,13 +34,13 @@ repos:
       - id: nbqa-ruff-format
 
   - repo: https://github.com/kynan/nbstripout
-    rev: 0.8.1
+    rev: 0.8.2
     hooks:
       - id: nbstripout
         args: [--extra-keys, 'cell.metadata.executionInfo cell.metadata.colab cell.metadata.id cell.metadata.outputId']
 
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.9.1
+    rev: v4.10.0
     hooks:
       - id: commitizen
         stages: [commit-msg]
