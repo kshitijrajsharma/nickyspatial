@@ -10,9 +10,6 @@ An open-source object-based image analysis library for remote sensing.
 | **Package Info** | ![Python](https://img.shields.io/badge/Python-3.10%2B-blue) [![PyPI version](https://img.shields.io/pypi/v/nickyspatial.svg)](https://pypi.org/project/nickyspatial) ![Dependencies](https://img.shields.io/librariesio/github/kshitijrajsharma/nickyspatial) ![License](https://img.shields.io/badge/License-MIT-yellow.svg) |
 | **Community** | ![GitHub Stars](https://img.shields.io/github/stars/kshitijrajsharma/nickyspatial?style=social) ![Issues](https://img.shields.io/github/issues/kshitijrajsharma/nickyspatial) ![Downloads](https://img.shields.io/pypi/dm/nickyspatial.svg) ![Last Commit](https://img.shields.io/github/last-commit/kshitijrajsharma/nickyspatial) |
 
-> [!WARNING]
-> This project is under active development and lot of its functionality is still in my head yet to code.
-
 Find Demo Frontend Here : https://nickyspatial-gpoqz.ondigitalocean.app/
 
 ## Description
