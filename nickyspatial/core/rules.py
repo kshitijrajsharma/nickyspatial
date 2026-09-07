@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Provides a rule engine for object-based analysis, where segments or layers are processed according to custom logic.
 
 Main idea here is to allow encode expert rules that can be applied to object segments which are layers in a nickyspatial context.
@@ -179,7 +178,7 @@ class RuleSet:
                 result_layer.objects.loc[mask, result_field] = rule.class_value
 
             except Exception as e:
-                print(f"Error applying rule '{rule.name}': {str(e)}")
+                print(f"Error applying rule '{rule.name}': {e!s}")
                 continue
 
         if layer_manager:

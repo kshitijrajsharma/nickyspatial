@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Spectral indices calculation module."""
 
 import re
@@ -163,7 +162,7 @@ class SpectralIndexCalculator:
             },
         }
 
-    def _parse_formula(self, formula: str, bands: Dict[str, str]) -> str:
+    def _parse_formula(self, formula: str, bands: dict[str, str]) -> str:
         """Parse a formula string and replace band names with actual column references."""
         parsed_formula = formula.upper()
 
@@ -176,7 +175,7 @@ class SpectralIndexCalculator:
 
         return parsed_formula
 
-    def _evaluate_formula(self, formula: str, bands_data: Dict[str, np.ndarray]) -> np.ndarray:
+    def _evaluate_formula(self, formula: str, bands_data: dict[str, np.ndarray]) -> np.ndarray:
         """Evaluate a mathematical formula using band data."""
         safe_dict = {
             "bands": bands_data,
@@ -209,9 +208,9 @@ class SpectralIndexCalculator:
                 result = np.full(len(next(iter(bands_data.values()))), result)
             return result.astype(float)
         except Exception as err:
-            raise ValueError(f"Error evaluating formula '{formula}': {str(err)}") from err
+            raise ValueError(f"Error evaluating formula '{formula}': {err!s}") from err
 
-    def _calculate_statistics(self, values: np.ndarray) -> Dict[str, float]:
+    def _calculate_statistics(self, values: np.ndarray) -> dict[str, float]:
         """Calculate statistics for an array of values."""
         return {
             "mean": float(np.mean(values)),
@@ -319,7 +318,7 @@ def attach_spectral_index(layer, index_name, formula=None, bands=None, output_co
         return result
 
     except Exception as e:
-        return {"error": f"Failed to calculate {index_name}: {str(e)}"}
+        return {"error": f"Failed to calculate {index_name}: {e!s}"}
 
 
 def add_custom_index(name, formula, description="", reference=""):
