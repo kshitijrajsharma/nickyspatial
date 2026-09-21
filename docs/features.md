@@ -61,15 +61,10 @@ Use scikit-learn algorithms for object classification.
 
 ```python
 classifier = ns.SupervisedClassifier(
-    name="RF Classification",
-    classifier_type="Random Forest",
-    classifier_params={"n_estimators": 100}
+    name="RF Classification", classifier_type="Random Forest", classifier_params={"n_estimators": 100}
 )
 classification_layer, accuracy, feature_importances = classifier.execute(
-    layer,
-    samples=samples,
-    layer_name="classified_layer",
-    features=["mean_intensity", "area_units", "ndvi"]
+    layer, samples=samples, layer_name="classified_layer", features=["mean_intensity", "area_units", "ndvi"]
 )
 ```
 
@@ -80,15 +75,10 @@ Leverage TensorFlow/Keras for advanced classification.
 
 ```python
 cnn_classifier = ns.SupervisedClassifierDL(
-    name="CNN Classification",
-    classifier_type="cnn",
-    classifier_params={"epochs": 50, "batch_size": 32}
+    name="CNN Classification", classifier_type="cnn", classifier_params={"epochs": 50, "batch_size": 32}
 )
 classification_layer, model_history, eval_result, count_dict, invalid_patches = cnn_classifier.execute(
-    layer,
-    samples=samples,
-    image_data=image_data,
-    layer_name="cnn_classified"
+    layer, samples=samples, image_data=image_data, layer_name="cnn_classified"
 )
 ```
 
@@ -116,11 +106,7 @@ touched_rules = ns.TouchedByRuleSet()
 merge_rules = ns.MergeRuleSet()
 
 spatial_result = enclosed_rules.execute(
-    layer,
-    class_column_name="classification",
-    class_value_a="building",
-    class_value_b="road",
-    new_class_name="enclosed_building"
+    layer, class_column_name="classification", class_value_a="building", class_value_b="road", new_class_name="enclosed_building"
 )
 ```
 
@@ -210,11 +196,7 @@ print(layer.metadata)
 Combine multiple data sources and coordinate systems.
 
 ```python
-combined_layer = ns.Layer.from_multiple_sources([
-    "optical_data.tif",
-    "radar_data.tif",
-    "elevation.tif"
-])
+combined_layer = ns.Layer.from_multiple_sources(["optical_data.tif", "radar_data.tif", "elevation.tif"])
 ```
 
 ## Performance Features

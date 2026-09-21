@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test suite for spectral indices functionality."""
 
 import numpy as np
