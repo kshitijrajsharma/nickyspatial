@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Streamlit Webapp.
 
 Frontend for the demo of nickyspatial library
@@ -111,7 +110,7 @@ def load_raster(file_path):
 
         return True
     except Exception as e:
-        st.error(f"Error loading raster data: {str(e)}")
+        st.error(f"Error loading raster data: {e!s}")
         return False
 
 
@@ -156,7 +155,7 @@ def perform_segmentation(image_data, transform, crs, scale_param, compactness_pa
             update_available_attributes()
             return segmentation_layer
     except Exception as e:
-        st.error(f"Error during segmentation: {str(e)}")
+        st.error(f"Error during segmentation: {e!s}")
         return None
 
 
@@ -180,7 +179,7 @@ def perform_supervised_classification(layer, selected_classifier, classifier_par
             update_available_attributes()
             return classification_layer, accuracy, feature_importances
     except Exception as e:
-        st.error(f"Error during supervised classification: {str(e)}")
+        st.error(f"Error during supervised classification: {e!s}")
         return None
 
 
@@ -208,7 +207,7 @@ def perform_supervised_classification_dl(layer, image_data, selected_classifier,
             update_available_attributes()
             return classification_layer, model_history, eval_result, count_dict, invalid_patches_segments_ids
     except Exception as e:
-        st.error(f"Error during supervised classification: {str(e)}")
+        st.error(f"Error during supervised classification: {e!s}")
         return None
 
 
@@ -229,7 +228,7 @@ def perform_merge_region(layer, class_column_name, class_value, layer_name):
             update_available_attributes()
             return merged_layer
     except Exception as e:
-        st.error(f"Error during merged_layer: {str(e)}")
+        st.error(f"Error during merged_layer: {e!s}")
         return None
 
 
@@ -251,7 +250,7 @@ def perform_enclosed_by(layer, class_column_name, class_value_a, class_value_b, 
             update_available_attributes()
             return enclosed_by_layer
     except Exception as e:
-        st.error(f"Error during enclosed_by_layer: {str(e)}")
+        st.error(f"Error during enclosed_by_layer: {e!s}")
         return None
 
 
@@ -273,7 +272,7 @@ def perform_touched_by(layer, class_column_name, class_value_a, class_value_b, n
             update_available_attributes()
             return touched_by_layer
     except Exception as e:
-        st.error(f"Error during touched_by_layer: {str(e)}")
+        st.error(f"Error during touched_by_layer: {e!s}")
         return None
 
 
@@ -291,7 +290,7 @@ def calculate_ndvi(layer, nir_column, red_column, output_column="NDVI"):
             update_available_attributes()
         return True
     except Exception as e:
-        st.error(f"Error calculating NDVI: {str(e)}")
+        st.error(f"Error calculating NDVI: {e!s}")
         return False
 
 
@@ -303,7 +302,7 @@ def calculate_spectral_indices(layer, band_mappings):
             update_available_attributes()
         return True
     except Exception as e:
-        st.error(f"Error calculating spectral indices: {str(e)}")
+        st.error(f"Error calculating spectral indices: {e!s}")
         return False
 
 
@@ -315,7 +314,7 @@ def calculate_shape_metrics(layer):
             update_available_attributes()
         return True
     except Exception as e:
-        st.error(f"Error calculating shape metrics: {str(e)}")
+        st.error(f"Error calculating shape metrics: {e!s}")
         return False
 
 
@@ -331,7 +330,7 @@ def apply_rule_set(ruleset, input_layer, output_layer_name, result_field):
             update_available_attributes()
             return result_layer
     except Exception as e:
-        st.error(f"Error applying rule set: {str(e)}")
+        st.error(f"Error applying rule set: {e!s}")
         return None
 
 
@@ -342,7 +341,7 @@ def calculate_area_stats(layer, class_field):
             layer.attach_function(attach_area_stats, name="area_by_class", by_class=class_field)
             return layer.get_function_result("area_by_class")
     except Exception as e:
-        st.error(f"Error calculating area statistics: {str(e)}")
+        st.error(f"Error calculating area statistics: {e!s}")
         return None
 
 
@@ -353,7 +352,7 @@ def export_vector(layer, export_filepath):
             layer_to_vector(layer, export_filepath)
             return True
     except Exception as e:
-        st.error(f"Error exporting vector: {str(e)}")
+        st.error(f"Error exporting vector: {e!s}")
         return False
 
 
@@ -364,7 +363,7 @@ def export_raster(layer, export_filepath, column):
             layer_to_raster(layer, export_filepath, column=column)
             return True
     except Exception as e:
-        st.error(f"Error exporting raster: {str(e)}")
+        st.error(f"Error exporting raster: {e!s}")
         return False
 
 
@@ -385,7 +384,7 @@ def create_example_rule_sets():
 
             return {"Land_Cover": land_cover_rules, "Vegetation_Types": vegetation_rules}
     except Exception as e:
-        st.error(f"Error creating example rule sets: {str(e)}")
+        st.error(f"Error creating example rule sets: {e!s}")
         return {}
 
 
@@ -506,7 +505,7 @@ def render_segmentation(index):
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
     except Exception as e:
-        st.error(f"error: {str(e)}")
+        st.error(f"error: {e!s}")
 
 
 def render_calculate_features(index):
@@ -620,7 +619,7 @@ def render_calculate_features(index):
                     if features_calculated:
                         st.success("All selected features calculated successfully!")
     except Exception as e:
-        st.error(f"error: {str(e)}")
+        st.error(f"error: {e!s}")
 
 
 def render_merge_regions(index):
@@ -697,7 +696,7 @@ def render_merge_regions(index):
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error: {e!s}")
 
 
 def render_enclosed_by_class(index):
@@ -794,7 +793,7 @@ def render_enclosed_by_class(index):
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error: {e!s}")
 
 
 def render_touched_by_class(index):
@@ -894,7 +893,7 @@ def render_touched_by_class(index):
         if "output_fig" in process_data:
             st.pyplot(process_data["output_fig"])
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error: {e!s}")
 
 
 def render_select_samples(index):
@@ -1157,7 +1156,7 @@ def render_select_samples(index):
                             st.session_state.classes[selected_class]["sample_ids"].append(seg_id)
                         st.rerun()
     except Exception as e:
-        st.error(f"error: {str(e)}")
+        st.error(f"error: {e!s}")
 
 
 def render_supervised_classification(index):
@@ -1243,7 +1242,7 @@ def render_supervised_classification(index):
         else:
             st.error("Error: Sample data are not created")
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error: {e!s}")
 
 
 def render_supervised_classification_deeplearning(index):
@@ -1391,7 +1390,7 @@ def render_supervised_classification_deeplearning(index):
         else:
             st.error("Error: Sample data are not created")
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error: {e!s}")
 
 
 def render_rule_based_classification(index):
@@ -1469,7 +1468,7 @@ def render_rule_based_classification(index):
                     st.session_state.rule_sets.update(example_rule_sets)
                     st.success("Example rule sets loaded successfully!")
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"Error: {e!s}")
 
 
 def render_rule_builder(index):
@@ -1606,7 +1605,7 @@ def render_rule_builder(index):
                             st.success(f"Rule set '{ruleset_selection}' deleted.")
                             st.rerun()
     except Exception as e:
-        st.error(f"error: {str(e)}")
+        st.error(f"error: {e!s}")
 
 
 def render_process_tab():
@@ -1696,7 +1695,7 @@ def render_process_tab():
             st.session_state.delete_index = None
             st.rerun()
     except Exception as e:
-        st.error(f"error: {str(e)}")
+        st.error(f"error: {e!s}")
 
 
 def render_layer_manager_tab():
