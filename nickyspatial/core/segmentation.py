@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Implements segmentation algorithms to partition images into meaningful region objects.
 
 The functions here might apply clustering or region-growing techniques, aiding object-based remote sensing analysis.
@@ -27,7 +26,6 @@ class BaseSegmentation:
 
     def __init__(self):
         """Initialize the base segmentation class."""
-        pass
 
     def _validate_inputs(self, image_data, transform, crs, raster_path=None):
         """Validate common inputs across all segmentation algorithms."""
@@ -62,9 +60,9 @@ class BaseSegmentation:
             image_data, transform, crs = read_raster(raster_path)
 
         if target_crs is not None and target_crs != crs:
-            from rasterio.warp import reproject, Resampling, calculate_default_transform
             from rasterio.crs import CRS
             from rasterio.transform import array_bounds
+            from rasterio.warp import Resampling, calculate_default_transform, reproject
 
             if isinstance(target_crs, str):
                 target_crs = CRS.from_string(target_crs)

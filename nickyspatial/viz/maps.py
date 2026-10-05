@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Functions to create maps and visualize layers."""
 
 import random
@@ -221,9 +220,9 @@ def plot_classification(layer, class_field="classification", figsize=(12, 10), l
         else:
             if idx < len(base_colors):
                 rgb = base_colors[idx][:3]
-                color_hex = "#{:02x}{:02x}{:02x}".format(int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
+                color_hex = f"#{int(rgb[0] * 255):02x}{int(rgb[1] * 255):02x}{int(rgb[2] * 255):02x}"
             else:
-                color_hex = "#{:06x}".format(random.randint(0, 0xFFFFFF))
+                color_hex = f"#{random.randint(0, 0xFFFFFF):06x}"
             class_color[class_value] = color_hex
 
         rgb_tuple = tuple(int(color_hex[i : i + 2], 16) / 255 for i in (1, 3, 5))
@@ -292,9 +291,9 @@ def plot_subplots_classification(
             # assign new color (from tab20 or random if exceeds)
             if idx < len(base_colors):
                 rgb = base_colors[idx][:3]
-                color_hex = "#{:02x}{:02x}{:02x}".format(int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
+                color_hex = f"#{int(rgb[0] * 255):02x}{int(rgb[1] * 255):02x}{int(rgb[2] * 255):02x}"
             else:
-                color_hex = "#{:06x}".format(random.randint(0, 0xFFFFFF))
+                color_hex = f"#{random.randint(0, 0xFFFFFF):06x}"
             class_color[class_value] = color_hex
 
         # convert hex → RGB tuple for ListedColormap
@@ -483,7 +482,7 @@ def plot_sample(
             color_hex = class_color[class_value]
         else:
             rgb_val = base_colors[idx % len(base_colors)][:3]
-            color_hex = "#{:02x}{:02x}{:02x}".format(int(rgb_val[0] * 255), int(rgb_val[1] * 255), int(rgb_val[2] * 255))
+            color_hex = f"#{int(rgb_val[0] * 255):02x}{int(rgb_val[1] * 255):02x}{int(rgb_val[2] * 255):02x}"
             class_color[class_value] = color_hex
         class_map[class_value] = color_hex
 

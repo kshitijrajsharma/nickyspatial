@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Layer class and related functionality for organizing geospatial data."""
 
 import uuid
