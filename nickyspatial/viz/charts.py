@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Visualization functions for plotting histograms, statistics, and scatter plots."""
 
 import matplotlib.pyplot as plt
