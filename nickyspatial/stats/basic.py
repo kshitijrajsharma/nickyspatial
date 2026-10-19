@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Basic statistics for layers in NickySpatial."""
 
 import numpy as np
