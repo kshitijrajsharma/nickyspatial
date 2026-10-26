@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Implements supervised classification algorithms to classify the segments."""
 
 from collections import Counter, defaultdict
