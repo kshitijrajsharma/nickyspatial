@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Performs spectral-based manipulations of imagery, including band arithmetic and transformations.
 
 It supports generating new spectral bands or combinations to highlight specific features.
@@ -121,7 +120,7 @@ def spectral_filter(source_layer, expression, layer_manager=None, layer_name=Non
             result_layer.raster = segments_raster
 
     except Exception as e:
-        raise ValueError(f"Error applying spectral filter: {str(e)}") from e
+        raise ValueError(f"Error applying spectral filter: {e!s}") from e
 
     if layer_manager:
         layer_manager.add_layer(result_layer)
