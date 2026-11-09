@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Handles raster input and output operations, including reading and saving multi-band images.
 
 Functions in this module may also provide metadata parsing and coordinate transform tools.
